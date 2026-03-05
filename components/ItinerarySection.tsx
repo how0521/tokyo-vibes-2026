@@ -14,8 +14,10 @@ const DAYS = [
   { num: 6, label: 'Day 6', date: '5/25' },
 ]
 
-// Blank form state
 const EMPTY_FORM = { time: '', title: '', map_url: '', notes: '' }
+
+const inputClass =
+  'w-full border border-soft-border rounded-xl px-4 py-3 bg-warm-gray text-sm text-charcoal placeholder:text-mid-gray outline-none focus:border-tokyo-red transition-colors'
 
 export default function ItinerarySection() {
   const [activeDay, setActiveDay] = useState(1)
@@ -28,7 +30,6 @@ export default function ItinerarySection() {
   const [editForm, setEditForm] = useState(EMPTY_FORM)
   const formRef = useRef<HTMLDivElement>(null)
 
-  // Initial fetch
   useEffect(() => {
     fetchItinerary().then((data) => {
       setItems(data)
@@ -36,7 +37,6 @@ export default function ItinerarySection() {
     })
   }, [])
 
-  // Realtime subscription
   useEffect(() => {
     const channel = supabase
       .channel('itinerary-realtime')
@@ -57,10 +57,7 @@ export default function ItinerarySection() {
         }
       )
       .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
+    return () => { supabase.removeChannel(channel) }
   }, [])
 
   function sortItems(a: ItineraryItem, b: ItineraryItem) {
@@ -71,7 +68,6 @@ export default function ItinerarySection() {
   const dayItems = items.filter((i) => i.day_num === activeDay)
 
   async function handleToggle(item: ItineraryItem) {
-    // Optimistic update
     setItems((prev) =>
       prev.map((i) => (i.id === item.id ? { ...i, is_done: !i.is_done } : i))
     )
@@ -136,9 +132,7 @@ export default function ItinerarySection() {
       <div className="flex items-center justify-between mb-4">
         <p className="section-title mb-0">每日行程</p>
         {!loading && (
-          <span className="text-xs text-mid-gray">
-            {doneCount}/{dayItems.length} 完成
-          </span>
+          <span className="text-xs text-mid-gray">{doneCount}/{dayItems.length} 完成</span>
         )}
       </div>
 
@@ -162,11 +156,9 @@ export default function ItinerarySection() {
                 {d.date}
               </span>
               {count > 0 && (
-                <span
-                  className={`mt-0.5 text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center ${
-                    active ? 'bg-tokyo-red text-white' : 'bg-mid-gray/30 text-mid-gray'
-                  }`}
-                >
+                <span className={`mt-0.5 text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center ${
+                  active ? 'bg-tokyo-red text-white' : 'bg-mid-gray/30 text-mid-gray'
+                }`}>
                   {count}
                 </span>
               )}
@@ -191,63 +183,63 @@ export default function ItinerarySection() {
 
           {dayItems.map((item) =>
             editingId === item.id ? (
-              // Edit mode
               <div key={item.id} className="card p-4 border-l-4 border-l-tokyo-red">
-                <div className="space-y-2">
-                  <div className="flex gap-2">
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs text-mid-gray font-medium mb-1 block">時間</label>
                     <input
                       type="time"
                       value={editForm.time}
                       onChange={(e) => setEditForm({ ...editForm, time: e.target.value })}
-                      className="text-xs border border-soft-border rounded-lg px-2 py-1.5 w-24 bg-warm-gray"
+                      className={inputClass}
                     />
+                  </div>
+                  <div>
+                    <label className="text-xs text-mid-gray font-medium mb-1 block">景點名稱</label>
                     <input
                       type="text"
                       value={editForm.title}
                       onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
                       placeholder="景點名稱"
-                      className="flex-1 text-sm border border-soft-border rounded-lg px-3 py-1.5 bg-warm-gray"
+                      className={inputClass}
                     />
                   </div>
-                  <input
-                    type="url"
-                    value={editForm.map_url}
-                    onChange={(e) => setEditForm({ ...editForm, map_url: e.target.value })}
-                    placeholder="Google Maps URL（選填）"
-                    className="w-full text-xs border border-soft-border rounded-lg px-3 py-1.5 bg-warm-gray"
-                  />
-                  <textarea
-                    value={editForm.notes}
-                    onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                    placeholder="備注（選填）"
-                    rows={2}
-                    className="w-full text-xs border border-soft-border rounded-lg px-3 py-1.5 bg-warm-gray resize-none"
-                  />
+                  <div>
+                    <label className="text-xs text-mid-gray font-medium mb-1 block">Google Maps URL（選填）</label>
+                    <input
+                      type="url"
+                      value={editForm.map_url}
+                      onChange={(e) => setEditForm({ ...editForm, map_url: e.target.value })}
+                      placeholder="https://maps.google.com/..."
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-mid-gray font-medium mb-1 block">備注（選填）</label>
+                    <textarea
+                      value={editForm.notes}
+                      onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                      placeholder="票價、注意事項..."
+                      rows={2}
+                      className={inputClass + ' resize-none'}
+                    />
+                  </div>
                   <div className="flex gap-2 pt-1">
-                    <button
-                      onClick={() => handleEditSave(item.id)}
-                      disabled={saving}
-                      className="btn-primary flex-1 text-xs py-2"
-                    >
-                      {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                    <button onClick={() => handleEditSave(item.id)} disabled={saving} className="btn-primary flex-1">
+                      {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
                       儲存
                     </button>
-                    <button
-                      onClick={() => setEditingId(null)}
-                      className="btn-outline px-4 py-2 text-xs"
-                    >
-                      <X size={14} />
+                    <button onClick={() => setEditingId(null)} className="btn-outline px-4">
+                      <X size={15} />
                     </button>
                   </div>
                 </div>
               </div>
             ) : (
-              // View mode
               <div
                 key={item.id}
                 className={`card p-4 flex gap-3 transition-opacity duration-200 ${item.is_done ? 'opacity-60' : ''}`}
               >
-                {/* Checkbox */}
                 <div className="pt-0.5">
                   <input
                     type="checkbox"
@@ -256,8 +248,6 @@ export default function ItinerarySection() {
                     aria-label={`標記 ${item.title} 完成`}
                   />
                 </div>
-
-                {/* Content */}
                 <div className="flex-1 min-w-0" onClick={() => startEdit(item)}>
                   <div className="flex items-center gap-2 mb-1">
                     <div className="flex items-center gap-1 text-xs text-tokyo-red font-semibold">
@@ -288,8 +278,6 @@ export default function ItinerarySection() {
                     </a>
                   )}
                 </div>
-
-                {/* Delete */}
                 <button
                   onClick={() => handleDelete(item.id)}
                   className="p-2 text-mid-gray active:text-tokyo-red transition-colors self-start rounded-lg"
@@ -306,63 +294,70 @@ export default function ItinerarySection() {
       {/* Add Form */}
       {showForm && (
         <div ref={formRef} className="card p-4 mb-3 border-l-4 border-l-tokyo-red animate-slide-up">
-          <div className="space-y-2">
-            <div className="flex gap-2">
+          <p className="text-sm font-semibold text-charcoal mb-3">新增景點到 Day {activeDay}</p>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-mid-gray font-medium mb-1 block">時間</label>
               <input
                 type="time"
                 value={form.time}
                 onChange={(e) => setForm({ ...form, time: e.target.value })}
-                className="text-xs border border-soft-border rounded-lg px-2 py-1.5 w-24 bg-warm-gray"
+                className={inputClass}
               />
+            </div>
+            <div>
+              <label className="text-xs text-mid-gray font-medium mb-1 block">景點名稱 *</label>
               <input
                 type="text"
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
-                placeholder="景點名稱 *"
+                placeholder="例：淺草寺"
                 autoFocus
-                className="flex-1 text-sm border border-soft-border rounded-lg px-3 py-1.5 bg-warm-gray"
+                className={inputClass}
               />
             </div>
-            <input
-              type="url"
-              value={form.map_url}
-              onChange={(e) => setForm({ ...form, map_url: e.target.value })}
-              placeholder="Google Maps URL（選填）"
-              className="w-full text-xs border border-soft-border rounded-lg px-3 py-1.5 bg-warm-gray"
-            />
-            <textarea
-              value={form.notes}
-              onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              placeholder="備注、票價、注意事項（選填）"
-              rows={2}
-              className="w-full text-xs border border-soft-border rounded-lg px-3 py-1.5 bg-warm-gray resize-none"
-            />
+            <div>
+              <label className="text-xs text-mid-gray font-medium mb-1 block">Google Maps URL（選填）</label>
+              <input
+                type="url"
+                value={form.map_url}
+                onChange={(e) => setForm({ ...form, map_url: e.target.value })}
+                placeholder="https://maps.google.com/..."
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="text-xs text-mid-gray font-medium mb-1 block">備注（選填）</label>
+              <textarea
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                placeholder="票價、注意事項、開放時間..."
+                rows={3}
+                className={inputClass + ' resize-none'}
+              />
+            </div>
             <div className="flex gap-2 pt-1">
               <button
                 onClick={handleAdd}
                 disabled={saving || !form.title.trim()}
-                className="btn-primary flex-1 text-xs py-2 disabled:opacity-40"
+                className="btn-primary flex-1 disabled:opacity-40"
               >
-                {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
                 新增
               </button>
               <button
                 onClick={() => { setShowForm(false); setForm(EMPTY_FORM) }}
-                className="btn-outline px-4 py-2 text-xs"
+                className="btn-outline px-4"
               >
-                <X size={14} />
+                <X size={15} />
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Add Button */}
       {!showForm && (
-        <button
-          onClick={() => setShowForm(true)}
-          className="w-full btn-outline border-dashed"
-        >
+        <button onClick={() => setShowForm(true)} className="w-full btn-outline border-dashed">
           <Plus size={16} />
           新增景點到 Day {activeDay}
         </button>

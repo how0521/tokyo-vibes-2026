@@ -3,9 +3,9 @@ import { Map, Ticket, ArrowUpRight } from 'lucide-react'
 const LINKS = [
   {
     icon: Map,
-    label: '東京地鐵圖',
+    label: '東京地鐵路線圖',
     sublabel: 'Tokyo Metro PDF',
-    href: 'https://www.tokyometro.jp/en/subwaymap/pdf/tokyometro-map.pdf',
+    href: 'http://kanri.tokyometro.jp/en/subwaymap/pdf/routemap_en.pdf',
     color: 'text-blue-500',
     bg: 'bg-blue-50',
   },

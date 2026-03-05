@@ -1,9 +1,6 @@
 import { Suspense } from 'react'
 import CountdownTimer from '@/components/CountdownTimer'
-import FlightCard from '@/components/FlightCard'
-import HotelCard from '@/components/HotelCard'
-import ItinerarySection from '@/components/ItinerarySection'
-import QuickLinks from '@/components/QuickLinks'
+import TabLayout from '@/components/TabLayout'
 import PasswordGate from '@/components/PasswordGate'
 
 export default function HomePage() {
@@ -18,14 +15,12 @@ export default function HomePage() {
           <div className="relative px-5 pt-10 pb-8">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 bg-tokyo-red rounded-full flex items-center justify-center text-white text-sm font-bold">
+                <div className="w-8 h-8 bg-tokyo-red rounded-full flex items-center justify-center text-sm">
                   🗼
                 </div>
-                <div>
-                  <p className="text-[10px] font-semibold tracking-widest uppercase text-white/50">
-                    Travel Guide
-                  </p>
-                </div>
+                <p className="text-[10px] font-semibold tracking-widest uppercase text-white/50">
+                  Travel Guide
+                </p>
               </div>
               <div className="text-right">
                 <p className="text-[10px] text-white/40 tracking-widest uppercase">6D5N · Tokyo</p>
@@ -54,24 +49,8 @@ export default function HomePage() {
           </div>
         </header>
 
-        <main className="px-4 py-6 space-y-8 max-w-lg mx-auto">
-          <section>
-            <FlightCard />
-          </section>
-          <section>
-            <HotelCard />
-          </section>
-          <section>
-            <ItinerarySection />
-          </section>
-          <section>
-            <QuickLinks />
-          </section>
-          <footer className="text-center py-4 text-xs text-mid-gray/60 pb-10">
-            <p>TOKYO VIBES 2026 · Made with ❤</p>
-            <p className="mt-0.5">即時同步 · Supabase Realtime</p>
-          </footer>
-        </main>
+        {/* Tabbed Content */}
+        <TabLayout />
       </div>
     </PasswordGate>
   )
