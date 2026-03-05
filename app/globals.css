@@ -1,0 +1,115 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --cream: #FDFBF7;
+  --charcoal: #2D3436;
+  --tokyo-red: #E63946;
+  --soft-border: #E8E2D9;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #FDFBF7;
+  color: #2D3436;
+  font-family: 'Noto Sans JP', 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F5F1EB;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #B2BEC3;
+  border-radius: 4px;
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-2xl border border-soft-border shadow-sm;
+  }
+
+  .btn-primary {
+    @apply bg-tokyo-red text-white font-medium rounded-xl px-5 py-3
+           active:bg-tokyo-red-dark transition-colors duration-150
+           min-h-[48px] flex items-center justify-center gap-2 text-sm;
+  }
+
+  .btn-outline {
+    @apply border border-soft-border text-charcoal font-medium rounded-xl px-5 py-3
+           active:bg-warm-gray transition-colors duration-150
+           min-h-[48px] flex items-center justify-center gap-2 text-sm;
+  }
+
+  .section-title {
+    @apply text-xs font-semibold tracking-widest uppercase text-mid-gray mb-4;
+  }
+}
+
+/* Countdown flip style */
+.countdown-block {
+  background: white;
+  border: 1px solid #E8E2D9;
+  border-radius: 16px;
+  min-width: 72px;
+  padding: 12px 8px 8px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.countdown-number {
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #E63946;
+  letter-spacing: -1px;
+  font-variant-numeric: tabular-nums;
+}
+
+.countdown-label {
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #B2BEC3;
+  margin-top: 4px;
+}
+
+/* Tab underline */
+.tab-active {
+  border-bottom: 2px solid #E63946;
+  color: #E63946;
+  font-weight: 600;
+}
+
+/* Checkbox custom style */
+input[type="checkbox"] {
+  accent-color: #E63946;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* Itinerary item done state */
+.item-done .item-title {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
