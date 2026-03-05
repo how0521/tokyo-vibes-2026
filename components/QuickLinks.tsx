@@ -5,7 +5,7 @@ const LINKS = [
     icon: Map,
     label: '東京地鐵路線圖',
     sublabel: 'Tokyo Metro PDF',
-    href: 'http://kanri.tokyometro.jp/en/subwaymap/pdf/routemap_en.pdf',
+    href: 'https://www.tokyometro.jp/station/pdf/202305/202305_number_tcn.pdf',
     color: 'text-blue-500',
     bg: 'bg-blue-50',
   },
