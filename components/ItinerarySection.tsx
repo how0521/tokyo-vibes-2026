@@ -19,6 +19,9 @@ const EMPTY_FORM = { time: '', title: '', map_url: '', notes: '' }
 const inputClass =
   'w-full border border-soft-border rounded-xl px-4 py-3 bg-warm-gray text-sm text-charcoal placeholder:text-mid-gray outline-none focus:border-tokyo-red transition-colors'
 
+const timeInputClass =
+  'w-36 border border-soft-border rounded-xl px-3 py-3 bg-warm-gray text-sm text-charcoal outline-none focus:border-tokyo-red transition-colors'
+
 export default function ItinerarySection() {
   const [activeDay, setActiveDay] = useState(1)
   const [items, setItems] = useState<ItineraryItem[]>([])
@@ -191,7 +194,7 @@ export default function ItinerarySection() {
                       type="time"
                       value={editForm.time}
                       onChange={(e) => setEditForm({ ...editForm, time: e.target.value })}
-                      className={inputClass}
+                      className={timeInputClass}
                     />
                   </div>
                   <div>
@@ -302,7 +305,7 @@ export default function ItinerarySection() {
                 type="time"
                 value={form.time}
                 onChange={(e) => setForm({ ...form, time: e.target.value })}
-                className={inputClass}
+                className={timeInputClass}
               />
             </div>
             <div>

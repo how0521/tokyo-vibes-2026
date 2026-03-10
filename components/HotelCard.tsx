@@ -3,7 +3,7 @@ import { MapPin, Calendar, ArrowUpRight } from 'lucide-react'
 const HOTEL = {
   name: 'Tosei Hotel Cocone 上野御徒町',
   address: '3 Chome-23-9 Ueno, Taito City, Tokyo 110-0005',
-  mapUrl: 'https://www.google.com/maps/search/?api=1&query=Tosei+Hotel+Cocone+Ueno+Okachimachi',
+  mapUrl: 'https://maps.app.goo.gl/R88NyDZmPpZDTFgRA?g_st=ic',
   checkIn: '5月20日 (三)  15:00',
   checkOut: '5月25日 (一)  10:00',
   nights: '5 泊',
