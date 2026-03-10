@@ -1,0 +1,140 @@
+@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --cream: #E3F2FD;
+  --charcoal: #0D47A1;
+  --tokyo-red: #1E88E5;
+  --soft-border: #90CAF9;
+  --woody-yellow: #FFB300;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #E3F2FD;
+  color: #0D47A1;
+  font-family: 'Nunito', 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: #BBDEFB;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #90CAF9;
+  border-radius: 4px;
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-2xl border border-soft-border shadow-sm;
+  }
+
+  .btn-primary {
+    @apply bg-tokyo-red text-white font-bold rounded-xl px-5 py-3
+           active:bg-tokyo-red-dark transition-colors duration-150
+           min-h-[48px] flex items-center justify-center gap-2 text-sm;
+  }
+
+  .btn-outline {
+    @apply border border-soft-border text-charcoal font-semibold rounded-xl px-5 py-3
+           active:bg-warm-gray transition-colors duration-150
+           min-h-[48px] flex items-center justify-center gap-2 text-sm;
+  }
+
+  .section-title {
+    @apply text-xs font-bold tracking-widest uppercase text-mid-gray mb-4;
+  }
+}
+
+/* Cloud decoration */
+.cloud {
+  position: absolute;
+  background: rgba(255,255,255,0.85);
+  border-radius: 50px;
+  filter: blur(1px);
+}
+
+.cloud::before,
+.cloud::after {
+  content: '';
+  position: absolute;
+  background: rgba(255,255,255,0.85);
+  border-radius: 50%;
+}
+
+/* Countdown flip style */
+.countdown-block {
+  background: white;
+  border: 2px solid #90CAF9;
+  border-radius: 16px;
+  min-width: 72px;
+  padding: 12px 8px 8px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(30,136,229,0.15);
+}
+
+.countdown-number {
+  font-size: 2.25rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #FFB300;
+  letter-spacing: -1px;
+  font-variant-numeric: tabular-nums;
+  font-family: 'Bangers', cursive;
+  letter-spacing: 2px;
+}
+
+.countdown-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #78909C;
+  margin-top: 4px;
+}
+
+/* Tab underline */
+.tab-active {
+  border-bottom: 2px solid #FFB300;
+  color: #FFB300;
+  font-weight: 700;
+}
+
+/* Checkbox custom style */
+input[type="checkbox"] {
+  accent-color: #1E88E5;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* Itinerary item done state */
+.item-done .item-title {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+
+/* Star pattern for Toy Story bg */
+.stars-bg {
+  background-image: radial-gradient(circle, rgba(255,255,255,0.6) 1px, transparent 1px);
+  background-size: 30px 30px;
+}
