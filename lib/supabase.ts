@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import type { ItineraryItem } from './types'
+import type { ItineraryItem, Spot } from './types'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -69,6 +69,52 @@ export async function deleteItineraryItem(id: string): Promise<boolean> {
 
 export async function toggleItemDone(id: string, is_done: boolean): Promise<boolean> {
   return updateItineraryItem(id, { is_done })
+}
+
+// --- Spots CRUD ---
+
+export async function fetchSpots(): Promise<Spot[]> {
+  const { data, error } = await supabase
+    .from('spots')
+    .select('*')
+    .order('area', { ascending: true })
+    .order('category', { ascending: true })
+    .order('name', { ascending: true })
+
+  if (error) {
+    console.error('fetchSpots error:', error.message)
+    return []
+  }
+  return data ?? []
+}
+
+export async function addSpot(
+  spot: Omit<Spot, 'id' | 'created_at'>
+): Promise<Spot | null> {
+  const { data, error } = await supabase
+    .from('spots')
+    .insert(spot)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('addSpot error:', error.message)
+    return null
+  }
+  return data
+}
+
+export async function deleteSpot(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('spots')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    console.error('deleteSpot error:', error.message)
+    return false
+  }
+  return true
 }
 
 // 批量更新多個景點時間（用於自動重排）

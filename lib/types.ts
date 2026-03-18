@@ -1,3 +1,24 @@
+export type SpotCategory = 'spot' | 'restaurant'
+
+export interface Spot {
+  id: string
+  name: string
+  name_jp: string | null
+  category: SpotCategory
+  area: string
+  description: string | null
+  image_url: string | null
+  map_url: string | null
+  tags: string[] | null
+  is_default: boolean
+  created_at?: string
+}
+
+export const SPOT_CATEGORY_LABELS: Record<SpotCategory, string> = {
+  spot: '景點',
+  restaurant: '餐廳',
+}
+
 export interface ItineraryItem {
   id: string
   day_num: number

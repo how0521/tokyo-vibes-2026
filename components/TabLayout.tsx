@@ -1,16 +1,18 @@
 'use client'
 
 import { useState } from 'react'
-import { CalendarDays, Plane, Link2 } from 'lucide-react'
+import { CalendarDays, Plane, Link2, Star } from 'lucide-react'
 import ItinerarySection from './ItinerarySection'
 import FlightCard from './FlightCard'
 import HotelCard from './HotelCard'
 import QuickLinks from './QuickLinks'
+import SpotsSection from './SpotsSection'
 
 const TABS = [
   { id: 'itinerary', label: '行程', icon: CalendarDays },
   { id: 'travel', label: '航班 & 飯店', icon: Plane },
   { id: 'links', label: '快速連結', icon: Link2 },
+  { id: 'spots', label: '推薦景點', icon: Star },
 ]
 
 export default function TabLayout() {
@@ -50,6 +52,8 @@ export default function TabLayout() {
         )}
 
         {active === 'links' && <QuickLinks />}
+
+        {active === 'spots' && <SpotsSection />}
 
         <footer className="text-center py-4 text-xs text-mid-gray/60 pb-10">
           <p className="font-bold">TOKYO VIBES 2026 · Made with 🤠</p>
