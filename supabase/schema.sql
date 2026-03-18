@@ -5,15 +5,26 @@
 
 -- Create itinerary table
 CREATE TABLE IF NOT EXISTS public.itinerary (
-  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  day_num    SMALLINT NOT NULL CHECK (day_num BETWEEN 1 AND 6),
-  time       TEXT NOT NULL DEFAULT '09:00',  -- 'HH:MM' format
-  title      TEXT NOT NULL,
-  map_url    TEXT,
-  notes      TEXT,
-  is_done    BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  day_num          SMALLINT NOT NULL CHECK (day_num BETWEEN 1 AND 6),
+  time             TEXT NOT NULL DEFAULT '09:00',  -- 'HH:MM' format
+  stay_duration    INTEGER NOT NULL DEFAULT 60,    -- 停留分鐘
+  transit_duration INTEGER NOT NULL DEFAULT 30,    -- 交通分鐘 (到此景點)
+  transit_mode     TEXT NOT NULL DEFAULT 'train',  -- walk/train/taxi/bus
+  title            TEXT NOT NULL,
+  map_url          TEXT,
+  notes            TEXT,
+  is_done          BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at       TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- ============================================
+-- Migration: Add scheduling columns (if table already exists)
+-- ============================================
+ALTER TABLE public.itinerary
+  ADD COLUMN IF NOT EXISTS stay_duration    INTEGER NOT NULL DEFAULT 60,
+  ADD COLUMN IF NOT EXISTS transit_duration INTEGER NOT NULL DEFAULT 30,
+  ADD COLUMN IF NOT EXISTS transit_mode     TEXT NOT NULL DEFAULT 'train';
 
 -- Index for fast day queries
 CREATE INDEX IF NOT EXISTS idx_itinerary_day ON public.itinerary(day_num, time);

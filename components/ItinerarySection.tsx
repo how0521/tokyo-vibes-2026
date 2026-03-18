@@ -1,9 +1,19 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { MapPin, Plus, Trash2, Clock, StickyNote, X, Check, ExternalLink, Loader2 } from 'lucide-react'
-import { supabase, fetchItinerary, addItineraryItem, updateItineraryItem, deleteItineraryItem } from '@/lib/supabase'
-import type { ItineraryItem } from '@/lib/types'
+import {
+  MapPin, Plus, Trash2, Clock, StickyNote, X, Check,
+  ExternalLink, Loader2, AlertTriangle
+} from 'lucide-react'
+import {
+  supabase, fetchItinerary, addItineraryItem,
+  updateItineraryItem, deleteItineraryItem, batchUpdateTimes
+} from '@/lib/supabase'
+import type { ItineraryItem, TransitMode } from '@/lib/types'
+import {
+  calcEndTime, calcNextStart, timeToMinutes,
+  hasOverlap, TRANSIT_MODE_LABELS, TRANSIT_MODE_ICONS
+} from '@/lib/types'
 
 const DAYS = [
   { num: 1, label: 'Day 1', date: '5/20' },
@@ -14,13 +24,44 @@ const DAYS = [
   { num: 6, label: 'Day 6', date: '5/25' },
 ]
 
-const EMPTY_FORM = { time: '', title: '', map_url: '', notes: '' }
+const EMPTY_FORM = {
+  time: '', title: '', map_url: '', notes: '',
+  stay_duration: '60', transit_duration: '30', transit_mode: 'train' as TransitMode
+}
 
 const inputClass =
   'w-full border border-soft-border rounded-xl px-4 py-3 bg-warm-gray text-sm text-charcoal placeholder:text-mid-gray outline-none focus:border-tokyo-red transition-colors'
-
 const timeInputClass =
   'w-36 border border-soft-border rounded-xl px-3 py-3 bg-warm-gray text-sm text-charcoal outline-none focus:border-tokyo-red transition-colors'
+const numInputClass =
+  'w-24 border border-soft-border rounded-xl px-3 py-3 bg-warm-gray text-sm text-charcoal outline-none focus:border-tokyo-red transition-colors'
+
+interface OverlapWarning {
+  conflictingItemTitle: string
+  postponeMinutes: number
+  affectedIds: string[]
+  newTimes: string[]
+}
+
+// 計算當天所有項目的時間鏈（自動重排）
+function recomputeChain(
+  items: ItineraryItem[],
+  fromIndex: number
+): Array<{ id: string; time: string }> {
+  const updates: Array<{ id: string; time: string }> = []
+  for (let i = fromIndex + 1; i < items.length; i++) {
+    const prev = items[i - 1]
+    const prevEnd = calcEndTime(
+      i - 1 === fromIndex ? items[fromIndex].time : updates.find(u => u.id === prev.id)?.time ?? prev.time,
+      prev.stay_duration
+    )
+    const newStart = calcNextStart(prevEnd, items[i].transit_duration)
+    updates.push({ id: items[i].id, time: newStart })
+    // Mutate local copy so subsequent iterations use updated times
+    items[i] = { ...items[i], time: newStart }
+  }
+  return updates
+}
 
 export default function ItinerarySection() {
   const [activeDay, setActiveDay] = useState(1)
@@ -31,6 +72,8 @@ export default function ItinerarySection() {
   const [saving, setSaving] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState(EMPTY_FORM)
+  const [overlapWarning, setOverlapWarning] = useState<OverlapWarning | null>(null)
+  const [pendingEdit, setPendingEdit] = useState<{ id: string; form: typeof EMPTY_FORM } | null>(null)
   const formRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -43,22 +86,18 @@ export default function ItinerarySection() {
   useEffect(() => {
     const channel = supabase
       .channel('itinerary-realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'itinerary' },
-        (payload) => {
-          const { eventType, new: newRow, old: oldRow } = payload
-          if (eventType === 'INSERT') {
-            setItems((prev) => [...prev, newRow as ItineraryItem].sort(sortItems))
-          } else if (eventType === 'UPDATE') {
-            setItems((prev) =>
-              prev.map((item) => (item.id === (newRow as ItineraryItem).id ? (newRow as ItineraryItem) : item))
-            )
-          } else if (eventType === 'DELETE') {
-            setItems((prev) => prev.filter((item) => item.id !== (oldRow as ItineraryItem).id))
-          }
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'itinerary' }, (payload) => {
+        const { eventType, new: newRow, old: oldRow } = payload
+        if (eventType === 'INSERT') {
+          setItems((prev) => [...prev, newRow as ItineraryItem].sort(sortItems))
+        } else if (eventType === 'UPDATE') {
+          setItems((prev) =>
+            prev.map((item) => (item.id === (newRow as ItineraryItem).id ? (newRow as ItineraryItem) : item))
+          )
+        } else if (eventType === 'DELETE') {
+          setItems((prev) => prev.filter((item) => item.id !== (oldRow as ItineraryItem).id))
         }
-      )
+      })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [])
@@ -70,23 +109,132 @@ export default function ItinerarySection() {
 
   const dayItems = items.filter((i) => i.day_num === activeDay)
 
-  async function handleToggle(item: ItineraryItem) {
-    setItems((prev) =>
-      prev.map((i) => (i.id === item.id ? { ...i, is_done: !i.is_done } : i))
-    )
-    await updateItineraryItem(item.id, { is_done: !item.is_done })
+  // ── 儲存編輯（含重疊偵測）──
+  async function handleEditSave(id: string, formData: typeof EMPTY_FORM) {
+    if (!formData.title.trim()) return
+    const idx = dayItems.findIndex((i) => i.id === id)
+    const prev = idx > 0 ? dayItems[idx - 1] : null
+
+    const newTime = formData.time || dayItems[idx].time
+    const newStay = parseInt(formData.stay_duration) || 60
+
+    // 偵測與前一個景點是否重疊
+    if (prev) {
+      const prevEnd = calcEndTime(prev.time, prev.stay_duration)
+      if (timeToMinutes(newTime) < timeToMinutes(prevEnd)) {
+        // 計算需要順延多少分鐘
+        const overlap = timeToMinutes(prevEnd) - timeToMinutes(newTime)
+        // 計算後續全部受影響的 id 與新時間
+        const affectedItems = dayItems.slice(idx)
+        const newTimes: string[] = []
+        let cursor = newTime
+        for (let i = 0; i < affectedItems.length; i++) {
+          if (i === 0) {
+            newTimes.push(calcNextStart(prevEnd, 0)) // 緊接在 prev 結束後
+          } else {
+            cursor = calcNextStart(calcEndTime(newTimes[i - 1], parseInt(formData.stay_duration) || affectedItems[i - 1].stay_duration), affectedItems[i].transit_duration)
+            newTimes.push(cursor)
+          }
+        }
+        setOverlapWarning({
+          conflictingItemTitle: prev.title,
+          postponeMinutes: overlap,
+          affectedIds: affectedItems.map((i) => i.id),
+          newTimes,
+        })
+        setPendingEdit({ id, form: formData })
+        return
+      }
+    }
+
+    await doEditSave(id, formData)
   }
 
+  async function doEditSave(id: string, formData: typeof EMPTY_FORM) {
+    setSaving(true)
+    const updates = {
+      time: formData.time,
+      title: formData.title.trim(),
+      map_url: formData.map_url.trim() || null,
+      notes: formData.notes.trim() || null,
+      stay_duration: parseInt(formData.stay_duration) || 60,
+      transit_duration: parseInt(formData.transit_duration) || 30,
+      transit_mode: formData.transit_mode,
+    }
+
+    // 樂觀更新
+    setItems((prev) =>
+      prev.map((i) => i.id === id ? { ...i, ...updates } : i).sort(sortItems)
+    )
+    await updateItineraryItem(id, updates)
+
+    // 重新計算後續時間鏈
+    const updatedDayItems = items
+      .map((i) => i.id === id ? { ...i, ...updates } : i)
+      .filter((i) => i.day_num === activeDay)
+      .sort(sortItems)
+    const changedIdx = updatedDayItems.findIndex((i) => i.id === id)
+    const chainUpdates = recomputeChain([...updatedDayItems], changedIdx)
+    if (chainUpdates.length > 0) {
+      setItems((prev) => {
+        const map = new Map(chainUpdates.map((u) => [u.id, u.time]))
+        return prev.map((i) => map.has(i.id) ? { ...i, time: map.get(i.id)! } : i)
+      })
+      await batchUpdateTimes(chainUpdates)
+    }
+
+    setEditingId(null)
+    setSaving(false)
+  }
+
+  // ── 一鍵順延 ──
+  async function handlePostpone() {
+    if (!overlapWarning || !pendingEdit) return
+    setSaving(true)
+    const { affectedIds, newTimes } = overlapWarning
+    const { id, form: formData } = pendingEdit
+
+    // 先儲存當前編輯項目
+    const updates = {
+      time: newTimes[0],
+      title: formData.title.trim(),
+      map_url: formData.map_url.trim() || null,
+      notes: formData.notes.trim() || null,
+      stay_duration: parseInt(formData.stay_duration) || 60,
+      transit_duration: parseInt(formData.transit_duration) || 30,
+      transit_mode: formData.transit_mode,
+    }
+    setItems((prev) =>
+      prev.map((i) => {
+        if (i.id === id) return { ...i, ...updates }
+        const idx = affectedIds.indexOf(i.id)
+        return idx !== -1 ? { ...i, time: newTimes[idx] } : i
+      })
+    )
+    await updateItineraryItem(id, updates)
+    const batchUpdates = affectedIds.slice(1).map((aid, i) => ({ id: aid, time: newTimes[i + 1] }))
+    if (batchUpdates.length > 0) await batchUpdateTimes(batchUpdates)
+
+    setOverlapWarning(null)
+    setPendingEdit(null)
+    setEditingId(null)
+    setSaving(false)
+  }
+
+  // ── 新增景點 ──
   async function handleAdd() {
     if (!form.title.trim()) return
     setSaving(true)
     await addItineraryItem({
       day_num: activeDay,
-      time: form.time || '00:00',
+      time: form.time || '09:00',
       title: form.title.trim(),
       map_url: form.map_url.trim() || null,
       notes: form.notes.trim() || null,
       is_done: false,
+      stay_duration: parseInt(form.stay_duration) || 60,
+      transit_duration: parseInt(form.transit_duration) || 30,
+      transit_mode: form.transit_mode,
     })
     setForm(EMPTY_FORM)
     setShowForm(false)
@@ -105,27 +253,48 @@ export default function ItinerarySection() {
       title: item.title,
       map_url: item.map_url ?? '',
       notes: item.notes ?? '',
+      stay_duration: String(item.stay_duration ?? 60),
+      transit_duration: String(item.transit_duration ?? 30),
+      transit_mode: (item.transit_mode as TransitMode) ?? 'train',
     })
   }
 
-  async function handleEditSave(id: string) {
-    if (!editForm.title.trim()) return
-    setSaving(true)
-    setItems((prev) =>
-      prev.map((i) =>
-        i.id === id
-          ? { ...i, time: editForm.time, title: editForm.title, map_url: editForm.map_url || null, notes: editForm.notes || null }
-          : i
-      )
-    )
-    await updateItineraryItem(id, {
-      time: editForm.time,
-      title: editForm.title.trim(),
-      map_url: editForm.map_url.trim() || null,
-      notes: editForm.notes.trim() || null,
+  async function handleToggle(item: ItineraryItem) {
+    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, is_done: !i.is_done } : i)))
+    await updateItineraryItem(item.id, { is_done: !item.is_done })
+  }
+
+  // ── 快速修改交通模式（transit block 點擊）──
+  async function cycleTransitMode(item: ItineraryItem) {
+    const modes: TransitMode[] = ['walk', 'train', 'taxi', 'bus']
+    const next = modes[(modes.indexOf(item.transit_mode as TransitMode) + 1) % modes.length]
+    setItems((prev) => prev.map((i) => i.id === item.id ? { ...i, transit_mode: next } : i))
+    await updateItineraryItem(item.id, { transit_mode: next })
+  }
+
+  async function updateTransitDuration(item: ItineraryItem, minutes: number) {
+    const updated = { ...item, transit_duration: minutes }
+    setItems((prev) => {
+      const newItems = prev.map((i) => i.id === item.id ? updated : i)
+      return newItems
     })
-    setEditingId(null)
-    setSaving(false)
+    await updateItineraryItem(item.id, { transit_duration: minutes })
+
+    // 重新計算後續時間鏈
+    const updatedDayItems = items
+      .map((i) => i.id === item.id ? updated : i)
+      .filter((i) => i.day_num === activeDay)
+      .sort(sortItems)
+    const changedIdx = updatedDayItems.findIndex((i) => i.id === item.id)
+    // 從 changedIdx 開始重算（本身時間不變，但它影響後面的）
+    const chainUpdates = recomputeChain([...updatedDayItems], changedIdx)
+    if (chainUpdates.length > 0) {
+      setItems((prev) => {
+        const map = new Map(chainUpdates.map((u) => [u.id, u.time]))
+        return prev.map((i) => map.has(i.id) ? { ...i, time: map.get(i.id)! } : i)
+      })
+      await batchUpdateTimes(chainUpdates)
+    }
   }
 
   const doneCount = dayItems.filter((i) => i.is_done).length
@@ -176,7 +345,7 @@ export default function ItinerarySection() {
           <Loader2 size={24} className="animate-spin text-mid-gray" />
         </div>
       ) : (
-        <div className="space-y-2 mb-4">
+        <div className="mb-4">
           {dayItems.length === 0 && !showForm && (
             <div className="text-center py-10 text-mid-gray">
               <p className="text-sm">還沒有行程</p>
@@ -184,113 +353,89 @@ export default function ItinerarySection() {
             </div>
           )}
 
-          {dayItems.map((item) =>
-            editingId === item.id ? (
-              <div key={item.id} className="card p-4 border-l-4 border-l-tokyo-red">
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs text-mid-gray font-medium mb-1 block">時間</label>
-                    <input
-                      type="time"
-                      value={editForm.time}
-                      onChange={(e) => setEditForm({ ...editForm, time: e.target.value })}
-                      className={timeInputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-mid-gray font-medium mb-1 block">景點名稱</label>
-                    <input
-                      type="text"
-                      value={editForm.title}
-                      onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                      placeholder="景點名稱"
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-mid-gray font-medium mb-1 block">Google Maps URL（選填）</label>
-                    <input
-                      type="url"
-                      value={editForm.map_url}
-                      onChange={(e) => setEditForm({ ...editForm, map_url: e.target.value })}
-                      placeholder="https://maps.google.com/..."
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-mid-gray font-medium mb-1 block">備注（選填）</label>
-                    <textarea
-                      value={editForm.notes}
-                      onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                      placeholder="票價、注意事項..."
-                      rows={2}
-                      className={inputClass + ' resize-none'}
-                    />
-                  </div>
-                  <div className="flex gap-2 pt-1">
-                    <button onClick={() => handleEditSave(item.id)} disabled={saving} className="btn-primary flex-1">
-                      {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
-                      儲存
-                    </button>
-                    <button onClick={() => setEditingId(null)} className="btn-outline px-4">
-                      <X size={15} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div
-                key={item.id}
-                className={`card p-4 flex gap-3 transition-opacity duration-200 ${item.is_done ? 'opacity-60' : ''}`}
-              >
-                <div className="pt-0.5">
-                  <input
-                    type="checkbox"
-                    checked={item.is_done}
-                    onChange={() => handleToggle(item)}
-                    aria-label={`標記 ${item.title} 完成`}
+          {dayItems.map((item, idx) => {
+            const endTime = calcEndTime(item.time, item.stay_duration ?? 60)
+            const isFirst = idx === 0
+            return (
+              <div key={item.id}>
+                {/* Transit Block（第一個景點不顯示）*/}
+                {!isFirst && (
+                  <TransitBlock
+                    item={item}
+                    onCycleMode={() => cycleTransitMode(item)}
+                    onUpdateDuration={(min) => updateTransitDuration(item, min)}
                   />
-                </div>
-                <div className="flex-1 min-w-0" onClick={() => startEdit(item)}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="flex items-center gap-1 text-xs text-tokyo-red font-semibold">
-                      <Clock size={11} />
-                      {item.time}
+                )}
+
+                {/* Spot Card */}
+                {editingId === item.id ? (
+                  <EditCard
+                    item={item}
+                    editForm={editForm}
+                    setEditForm={setEditForm}
+                    saving={saving}
+                    onSave={() => handleEditSave(item.id, editForm)}
+                    onCancel={() => setEditingId(null)}
+                  />
+                ) : (
+                  <div
+                    className={`card p-4 flex gap-3 transition-opacity duration-200 ${item.is_done ? 'opacity-60' : ''}`}
+                  >
+                    <div className="pt-0.5">
+                      <input
+                        type="checkbox"
+                        checked={item.is_done}
+                        onChange={() => handleToggle(item)}
+                        aria-label={`標記 ${item.title} 完成`}
+                      />
                     </div>
-                  </div>
-                  <p className={`text-sm font-semibold text-charcoal leading-snug ${item.is_done ? 'line-through' : ''}`}>
-                    {item.title}
-                  </p>
-                  {item.notes && (
-                    <div className="flex items-start gap-1 mt-1.5">
-                      <StickyNote size={11} className="text-mid-gray mt-0.5 shrink-0" />
-                      <p className="text-xs text-mid-gray leading-relaxed">{item.notes}</p>
+                    <div className="flex-1 min-w-0" onClick={() => startEdit(item)}>
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <div className="flex items-center gap-1 text-xs text-tokyo-red font-semibold">
+                          <Clock size={11} />
+                          {item.time}
+                        </div>
+                        {/* 預計離開時間 */}
+                        <div className="text-[10px] text-mid-gray bg-warm-gray px-2 py-0.5 rounded-full">
+                          離開 {endTime}
+                        </div>
+                      </div>
+                      <p className={`text-sm font-semibold text-charcoal leading-snug ${item.is_done ? 'line-through' : ''}`}>
+                        {item.title}
+                      </p>
+                      <p className="text-[10px] text-mid-gray mt-0.5">停留 {item.stay_duration ?? 60} 分鐘</p>
+                      {item.notes && (
+                        <div className="flex items-start gap-1 mt-1.5">
+                          <StickyNote size={11} className="text-mid-gray mt-0.5 shrink-0" />
+                          <p className="text-xs text-mid-gray leading-relaxed">{item.notes}</p>
+                        </div>
+                      )}
+                      {item.map_url && (
+                        <a
+                          href={item.map_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1 mt-2 text-xs text-blue-500 font-medium"
+                        >
+                          <MapPin size={11} />
+                          Google Maps
+                          <ExternalLink size={10} />
+                        </a>
+                      )}
                     </div>
-                  )}
-                  {item.map_url && (
-                    <a
-                      href={item.map_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="inline-flex items-center gap-1 mt-2 text-xs text-blue-500 font-medium"
+                    <button
+                      onClick={() => handleDelete(item.id)}
+                      className="p-2 text-mid-gray active:text-tokyo-red transition-colors self-start rounded-lg"
+                      aria-label="刪除"
                     >
-                      <MapPin size={11} />
-                      Google Maps
-                      <ExternalLink size={10} />
-                    </a>
-                  )}
-                </div>
-                <button
-                  onClick={() => handleDelete(item.id)}
-                  className="p-2 text-mid-gray active:text-tokyo-red transition-colors self-start rounded-lg"
-                  aria-label="刪除"
-                >
-                  <Trash2 size={15} />
-                </button>
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                )}
               </div>
             )
-          )}
+          })}
         </div>
       )}
 
@@ -298,63 +443,19 @@ export default function ItinerarySection() {
       {showForm && (
         <div ref={formRef} className="card p-4 mb-3 border-l-4 border-l-tokyo-red animate-slide-up">
           <p className="text-sm font-semibold text-charcoal mb-3">新增景點到 Day {activeDay}</p>
-          <div className="space-y-3">
-            <div>
-              <label className="text-xs text-mid-gray font-medium mb-1 block">時間</label>
-              <input
-                type="time"
-                value={form.time}
-                onChange={(e) => setForm({ ...form, time: e.target.value })}
-                className={timeInputClass}
-              />
-            </div>
-            <div>
-              <label className="text-xs text-mid-gray font-medium mb-1 block">景點名稱 *</label>
-              <input
-                type="text"
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                placeholder="例：淺草寺"
-                autoFocus
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className="text-xs text-mid-gray font-medium mb-1 block">Google Maps URL（選填）</label>
-              <input
-                type="url"
-                value={form.map_url}
-                onChange={(e) => setForm({ ...form, map_url: e.target.value })}
-                placeholder="https://maps.google.com/..."
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className="text-xs text-mid-gray font-medium mb-1 block">備注（選填）</label>
-              <textarea
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                placeholder="票價、注意事項、開放時間..."
-                rows={3}
-                className={inputClass + ' resize-none'}
-              />
-            </div>
-            <div className="flex gap-2 pt-1">
-              <button
-                onClick={handleAdd}
-                disabled={saving || !form.title.trim()}
-                className="btn-primary flex-1 disabled:opacity-40"
-              >
-                {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
-                新增
-              </button>
-              <button
-                onClick={() => { setShowForm(false); setForm(EMPTY_FORM) }}
-                className="btn-outline px-4"
-              >
-                <X size={15} />
-              </button>
-            </div>
+          <SpotFormFields form={form} setForm={setForm} />
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={handleAdd}
+              disabled={saving || !form.title.trim()}
+              className="btn-primary flex-1 disabled:opacity-40"
+            >
+              {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+              新增
+            </button>
+            <button onClick={() => { setShowForm(false); setForm(EMPTY_FORM) }} className="btn-outline px-4">
+              <X size={15} />
+            </button>
           </div>
         </div>
       )}
@@ -365,6 +466,232 @@ export default function ItinerarySection() {
           新增景點到 Day {activeDay}
         </button>
       )}
+
+      {/* 重疊警告 Modal */}
+      {overlapWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle size={20} className="text-amber-500" />
+              <h3 className="font-bold text-charcoal text-base">行程時間重疊</h3>
+            </div>
+            <p className="text-sm text-mid-gray mb-4">
+              此設定將與「{overlapWarning.conflictingItemTitle}」重疊。
+              是否將後續 <strong className="text-charcoal">{overlapWarning.affectedIds.length}</strong> 個行程整體順延？
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={handlePostpone}
+                disabled={saving}
+                className="btn-primary flex-1"
+              >
+                {saving ? <Loader2 size={15} className="animate-spin" /> : null}
+                一鍵順延
+              </button>
+              <button
+                onClick={() => { setOverlapWarning(null); setPendingEdit(null) }}
+                className="btn-outline px-4"
+              >
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── 子組件：Transit Block ──
+function TransitBlock({
+  item,
+  onCycleMode,
+  onUpdateDuration,
+}: {
+  item: ItineraryItem
+  onCycleMode: () => void
+  onUpdateDuration: (min: number) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [val, setVal] = useState(String(item.transit_duration ?? 30))
+  const mode = (item.transit_mode as TransitMode) ?? 'train'
+
+  function handleBlur() {
+    const min = parseInt(val)
+    if (!isNaN(min) && min >= 0) onUpdateDuration(min)
+    setEditing(false)
+  }
+
+  return (
+    <div className="flex items-center gap-2 px-4 py-2 my-1">
+      <div className="w-0.5 h-3 bg-soft-border mx-auto" />
+      <div className="flex-1 flex items-center gap-2 bg-warm-gray rounded-xl px-3 py-1.5">
+        <button
+          onClick={onCycleMode}
+          className="text-base leading-none"
+          title="點擊切換交通方式"
+        >
+          {TRANSIT_MODE_ICONS[mode]}
+        </button>
+        <span className="text-xs text-mid-gray">{TRANSIT_MODE_LABELS[mode]}</span>
+        <div className="flex items-center gap-1 ml-auto">
+          {editing ? (
+            <input
+              type="number"
+              min={0}
+              value={val}
+              autoFocus
+              onChange={(e) => setVal(e.target.value)}
+              onBlur={handleBlur}
+              onKeyDown={(e) => e.key === 'Enter' && handleBlur()}
+              className="w-14 text-xs text-center border border-soft-border rounded-lg px-1 py-0.5 bg-white outline-none"
+            />
+          ) : (
+            <button
+              onClick={() => setEditing(true)}
+              className="text-xs text-mid-gray font-medium hover:text-charcoal transition-colors"
+            >
+              {item.transit_duration ?? 30} 分鐘
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="w-0.5 h-3 bg-soft-border mx-auto" />
+    </div>
+  )
+}
+
+// ── 子組件：編輯卡片 ──
+function EditCard({
+  item,
+  editForm,
+  setEditForm,
+  saving,
+  onSave,
+  onCancel,
+}: {
+  item: ItineraryItem
+  editForm: typeof EMPTY_FORM
+  setEditForm: (f: typeof EMPTY_FORM) => void
+  saving: boolean
+  onSave: () => void
+  onCancel: () => void
+}) {
+  return (
+    <div className="card p-4 border-l-4 border-l-tokyo-red">
+      <SpotFormFields form={editForm} setForm={setEditForm} showTransit={false} />
+      <div className="flex gap-2 pt-1 mt-3">
+        <button onClick={onSave} disabled={saving} className="btn-primary flex-1">
+          {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+          儲存
+        </button>
+        <button onClick={onCancel} className="btn-outline px-4">
+          <X size={15} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── 子組件：表單欄位（新增/編輯共用）──
+function SpotFormFields({
+  form,
+  setForm,
+  showTransit = true,
+}: {
+  form: typeof EMPTY_FORM
+  setForm: (f: typeof EMPTY_FORM) => void
+  showTransit?: boolean
+}) {
+  const modes: TransitMode[] = ['walk', 'train', 'taxi', 'bus']
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-3">
+        <div className="flex-1">
+          <label className="text-xs text-mid-gray font-medium mb-1 block">抵達時間</label>
+          <input
+            type="time"
+            value={form.time}
+            onChange={(e) => setForm({ ...form, time: e.target.value })}
+            className={timeInputClass}
+          />
+        </div>
+        <div>
+          <label className="text-xs text-mid-gray font-medium mb-1 block">停留 (分鐘)</label>
+          <input
+            type="number"
+            min={0}
+            value={form.stay_duration}
+            onChange={(e) => setForm({ ...form, stay_duration: e.target.value })}
+            className={numInputClass}
+          />
+        </div>
+      </div>
+      <div>
+        <label className="text-xs text-mid-gray font-medium mb-1 block">景點名稱 *</label>
+        <input
+          type="text"
+          value={form.title}
+          onChange={(e) => setForm({ ...form, title: e.target.value })}
+          placeholder="例：淺草寺"
+          autoFocus
+          className={inputClass}
+        />
+      </div>
+      {showTransit && (
+        <div className="flex gap-3">
+          <div>
+            <label className="text-xs text-mid-gray font-medium mb-1 block">交通 (分鐘)</label>
+            <input
+              type="number"
+              min={0}
+              value={form.transit_duration}
+              onChange={(e) => setForm({ ...form, transit_duration: e.target.value })}
+              className={numInputClass}
+            />
+          </div>
+          <div className="flex-1">
+            <label className="text-xs text-mid-gray font-medium mb-1 block">交通方式</label>
+            <div className="flex gap-1">
+              {modes.map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setForm({ ...form, transit_mode: m })}
+                  className={`flex-1 text-sm py-2 rounded-xl border transition-colors ${
+                    form.transit_mode === m
+                      ? 'border-tokyo-red bg-tokyo-red/10 text-tokyo-red'
+                      : 'border-soft-border bg-warm-gray text-mid-gray'
+                  }`}
+                  title={TRANSIT_MODE_LABELS[m]}
+                >
+                  {TRANSIT_MODE_ICONS[m]}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      <div>
+        <label className="text-xs text-mid-gray font-medium mb-1 block">Google Maps URL（選填）</label>
+        <input
+          type="url"
+          value={form.map_url}
+          onChange={(e) => setForm({ ...form, map_url: e.target.value })}
+          placeholder="https://maps.google.com/..."
+          className={inputClass}
+        />
+      </div>
+      <div>
+        <label className="text-xs text-mid-gray font-medium mb-1 block">備注（選填）</label>
+        <textarea
+          value={form.notes}
+          onChange={(e) => setForm({ ...form, notes: e.target.value })}
+          placeholder="票價、注意事項、開放時間..."
+          rows={2}
+          className={inputClass + ' resize-none'}
+        />
+      </div>
     </div>
   )
 }

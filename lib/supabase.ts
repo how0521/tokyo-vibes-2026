@@ -70,3 +70,14 @@ export async function deleteItineraryItem(id: string): Promise<boolean> {
 export async function toggleItemDone(id: string, is_done: boolean): Promise<boolean> {
   return updateItineraryItem(id, { is_done })
 }
+
+// 批量更新多個景點時間（用於自動重排）
+export async function batchUpdateTimes(
+  updates: Array<{ id: string; time: string }>
+): Promise<boolean> {
+  const promises = updates.map(({ id, time }) =>
+    supabase.from('itinerary').update({ time }).eq('id', id)
+  )
+  const results = await Promise.all(promises)
+  return results.every((r) => !r.error)
+}
