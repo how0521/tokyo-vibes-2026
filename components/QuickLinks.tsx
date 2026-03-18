@@ -1,4 +1,4 @@
-import { Map, Ticket, ArrowUpRight } from 'lucide-react'
+import { Map, Ticket, Mountain, Train, ArrowUpRight } from 'lucide-react'
 
 const LINKS = [
   {
@@ -16,6 +16,22 @@ const LINKS = [
     href: 'https://reserve.tokyodisneyresort.jp/ticket/list/',
     color: 'text-tokyo-red',
     bg: 'bg-red-50',
+  },
+  {
+    icon: Mountain,
+    label: '富士山一日遊',
+    sublabel: 'Klook 行程',
+    href: 'https://www.klook.com/zh-TW/activity/93901-mtfuji-one-day-tour-tokyo/?spm=SearchResult.SearchResult_LIST&clickId=6493eb3a41',
+    color: 'text-emerald-500',
+    bg: 'bg-emerald-50',
+  },
+  {
+    icon: Train,
+    label: '京成 Skyliner 票',
+    sublabel: 'Klook 購票',
+    href: 'https://www.klook.com/zh-TW/activity/1410-skyliner-tokyo/?spm=SearchResult.SearchResult_LIST&clickId=c10d1fb156',
+    color: 'text-purple-500',
+    bg: 'bg-purple-50',
   },
 ]
 
