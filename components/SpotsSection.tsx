@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { MapPin, Plus, Trash2, Loader2, X } from 'lucide-react'
+import { MapPin, Plus, Trash2, Loader2, X, ExternalLink } from 'lucide-react'
 import { supabase, fetchSpots, addSpot, deleteSpot } from '@/lib/supabase'
 import type { Spot, SpotCategory } from '@/lib/types'
 import { SPOT_CATEGORY_LABELS } from '@/lib/types'
@@ -25,11 +25,124 @@ const CATEGORY_OPTIONS: Array<{ value: 'all' | SpotCategory; label: string }> = 
   { value: 'restaurant', label: '餐廳' },
 ]
 
-function SpotCard({ spot, onDelete }: { spot: Spot; onDelete: (id: string) => void }) {
+// ── Detail Modal ──────────────────────────────────────────────────────────────
+
+function SpotDetailModal({ spot, onClose, onDelete }: {
+  spot: Spot
+  onClose: () => void
+  onDelete: (id: string) => void
+}) {
+  const [imgError, setImgError] = useState(false)
+
+  function handleDelete() {
+    onDelete(spot.id)
+    onClose()
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg bg-cream rounded-t-3xl overflow-hidden max-h-[90vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Image */}
+        <div className="aspect-video bg-warm-gray relative flex-shrink-0">
+          {spot.image_url && !imgError ? (
+            <img
+              src={spot.image_url}
+              alt={spot.name}
+              className="w-full h-full object-cover"
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-warm-gray">
+              <MapPin size={48} className="text-mid-gray/30" />
+            </div>
+          )}
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            className="absolute top-3 right-3 p-1.5 rounded-full bg-black/40 text-white backdrop-blur-sm"
+          >
+            <X size={16} />
+          </button>
+          {/* Category badge */}
+          <span className={`absolute top-3 left-3 text-[11px] font-bold px-2.5 py-1 rounded-full ${
+            spot.category === 'restaurant'
+              ? 'bg-tokyo-red text-white'
+              : 'bg-woody-yellow text-charcoal'
+          }`}>
+            {SPOT_CATEGORY_LABELS[spot.category]}
+          </span>
+        </div>
+
+        {/* Content */}
+        <div className="p-5 overflow-y-auto space-y-3">
+          <div>
+            <p className="text-[11px] text-mid-gray mb-0.5">{spot.area}</p>
+            <h2 className="text-xl font-black text-charcoal leading-tight">{spot.name}</h2>
+            {spot.name_jp && (
+              <p className="text-sm text-mid-gray mt-0.5">{spot.name_jp}</p>
+            )}
+          </div>
+
+          {spot.description && (
+            <p className="text-sm text-charcoal leading-relaxed">{spot.description}</p>
+          )}
+
+          {spot.tags && spot.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {spot.tags.map((tag) => (
+                <span key={tag} className="text-xs bg-warm-gray text-mid-gray px-2 py-0.5 rounded-full">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-2 pt-1 pb-4">
+            {spot.map_url && (
+              <a
+                href={spot.map_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-2 py-3 bg-tokyo-red text-white font-bold rounded-2xl text-sm"
+              >
+                <MapPin size={15} />
+                在地圖開啟
+              </a>
+            )}
+            <button
+              onClick={handleDelete}
+              className="px-4 py-3 rounded-2xl border border-soft-border text-mid-gray hover:text-tokyo-red hover:border-tokyo-red transition-colors"
+            >
+              <Trash2 size={15} />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Spot Card ─────────────────────────────────────────────────────────────────
+
+function SpotCard({ spot, onSelect, onDelete }: {
+  spot: Spot
+  onSelect: (spot: Spot) => void
+  onDelete: (id: string) => void
+}) {
   const [imgError, setImgError] = useState(false)
 
   return (
-    <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-soft-border flex flex-col">
+    <div
+      className="bg-white rounded-2xl overflow-hidden shadow-sm border border-soft-border flex flex-col cursor-pointer active:scale-[0.98] transition-transform"
+      onClick={() => onSelect(spot)}
+    >
       {/* Cover image */}
       <div className="aspect-video bg-warm-gray relative overflow-hidden">
         {spot.image_url && !imgError ? (
@@ -41,7 +154,7 @@ function SpotCard({ spot, onDelete }: { spot: Spot; onDelete: (id: string) => vo
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-warm-gray">
-            <MapPin size={32} className="text-mid-gray/40" />
+            <MapPin size={28} className="text-mid-gray/40" />
           </div>
         )}
         {/* Category badge */}
@@ -55,59 +168,39 @@ function SpotCard({ spot, onDelete }: { spot: Spot; onDelete: (id: string) => vo
       </div>
 
       {/* Card body */}
-      <div className="p-3 flex flex-col gap-1.5 flex-1">
+      <div className="p-3 flex flex-col gap-1 flex-1">
         <div className="text-[10px] text-mid-gray">{spot.area}</div>
-        <div>
-          <p className="text-sm font-bold text-charcoal leading-tight">{spot.name}</p>
-          {spot.name_jp && (
-            <p className="text-[10px] text-mid-gray leading-tight">{spot.name_jp}</p>
-          )}
-        </div>
+        <p className="text-sm font-bold text-charcoal leading-tight">{spot.name}</p>
+        {spot.name_jp && (
+          <p className="text-[10px] text-mid-gray leading-tight">{spot.name_jp}</p>
+        )}
         {spot.description && (
-          <p className="text-xs text-mid-gray line-clamp-2 leading-relaxed">{spot.description}</p>
+          <p className="text-xs text-mid-gray line-clamp-2 leading-relaxed mt-0.5">{spot.description}</p>
         )}
         {spot.tags && spot.tags.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-0.5">
-            {spot.tags.map((tag) => (
+            {spot.tags.slice(0, 3).map((tag) => (
               <span key={tag} className="text-[10px] bg-warm-gray text-mid-gray px-1.5 py-0.5 rounded-full">
                 {tag}
               </span>
             ))}
           </div>
         )}
-
-        {/* Footer actions */}
-        <div className="flex items-center justify-between mt-auto pt-1.5">
-          {spot.map_url ? (
-            <a
-              href={spot.map_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 text-[11px] text-tokyo-red font-medium"
-            >
-              <MapPin size={12} />
-              地圖
-            </a>
-          ) : (
-            <span />
-          )}
-          <button
-            onClick={() => onDelete(spot.id)}
-            className="p-1 rounded-lg text-mid-gray hover:text-tokyo-red hover:bg-red-50 transition-colors"
-          >
-            <Trash2 size={13} />
-          </button>
-        </div>
+        {/* Tap hint */}
+        <p className="text-[10px] text-mid-gray/50 mt-auto pt-1.5">點擊查看詳情</p>
       </div>
     </div>
   )
 }
+
+// ── Main Section ──────────────────────────────────────────────────────────────
 
 export default function SpotsSection() {
   const [spots, setSpots] = useState<Spot[]>([])
   const [loading, setLoading] = useState(true)
   const [activeArea, setActiveArea] = useState('全部')
   const [activeCategory, setActiveCategory] = useState<'all' | SpotCategory>('all')
+  const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -123,9 +216,7 @@ export default function SpotsSection() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'spots' },
-        () => {
-          fetchSpots().then(setSpots)
-        }
+        () => { fetchSpots().then(setSpots) }
       )
       .subscribe()
 
@@ -212,7 +303,12 @@ export default function SpotsSection() {
       ) : (
         <div className="grid grid-cols-2 gap-3">
           {filtered.map((spot) => (
-            <SpotCard key={spot.id} spot={spot} onDelete={handleDelete} />
+            <SpotCard
+              key={spot.id}
+              spot={spot}
+              onSelect={setSelectedSpot}
+              onDelete={handleDelete}
+            />
           ))}
         </div>
       )}
@@ -225,6 +321,15 @@ export default function SpotsSection() {
         <Plus size={16} />
         新增景點或餐廳
       </button>
+
+      {/* Detail modal */}
+      {selectedSpot && (
+        <SpotDetailModal
+          spot={selectedSpot}
+          onClose={() => setSelectedSpot(null)}
+          onDelete={handleDelete}
+        />
+      )}
 
       {/* Add form slide-up */}
       {showForm && (
