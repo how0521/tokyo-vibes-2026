@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import Image from 'next/image'
 import CountdownTimer from '@/components/CountdownTimer'
 import TabLayout from '@/components/TabLayout'
 import PasswordGate from '@/components/PasswordGate'
@@ -21,8 +22,8 @@ export default function HomePage() {
           <div className="relative px-5 pt-10 pb-8">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 bg-woody-yellow rounded-full flex items-center justify-center text-sm">
-                  🤠
+                <div className="w-8 h-8 flex items-center justify-center">
+                  <Image src="/alien-emoji.png" alt="三眼仔" width={32} height={32} style={{ objectFit: 'contain' }} />
                 </div>
                 <p className="text-[10px] font-bold tracking-widest uppercase"
                   style={{ color: 'rgba(255,255,255,0.9)', textShadow: '0 1px 4px rgba(0,0,80,0.7)' }}>
