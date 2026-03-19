@@ -39,10 +39,10 @@ export default function HomePage() {
 
             <div className="mb-8 flex items-end justify-between">
               <div>
-                <h1 className="font-display text-5xl tracking-wide leading-none" style={{ fontFamily: 'Bangers, cursive', letterSpacing: '3px' }}>
+                <h1 className="font-display text-5xl tracking-wide leading-none" style={{ fontFamily: 'Bangers, cursive', letterSpacing: '3px', textShadow: '0 2px 6px rgba(0,0,80,0.7)' }}>
                   TOKYO
-                  <span className="block" style={{ color: '#FFB300' }}>VIBES</span>
-                  <span className="block text-3xl font-display text-white/70 mt-1" style={{ fontFamily: 'Bangers, cursive', letterSpacing: '4px' }}>
+                  <span className="block" style={{ color: '#FFB300', textShadow: '0 2px 6px rgba(0,0,50,0.6)' }}>VIBES</span>
+                  <span className="block text-3xl font-display text-white/70 mt-1" style={{ fontFamily: 'Bangers, cursive', letterSpacing: '4px', textShadow: '0 2px 6px rgba(0,0,80,0.7)' }}>
                     2026
                   </span>
                 </h1>
