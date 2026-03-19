@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import AlienMascot from './AlienMascot'
 
 const PASSWORD = '890215'
 const STORAGE_KEY = 'tokyo_vibes_auth'
@@ -48,7 +49,9 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
       <div className="relative w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-10">
-          <div className="text-6xl mb-4">🤠</div>
+          <div className="flex justify-center mb-4 drop-shadow-lg animate-bounce-slow">
+            <AlienMascot size={100} />
+          </div>
           <h1
             className="text-4xl font-bold text-white tracking-wider"
             style={{ fontFamily: 'Bangers, cursive', letterSpacing: '4px' }}

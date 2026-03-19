@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import CountdownTimer from '@/components/CountdownTimer'
 import TabLayout from '@/components/TabLayout'
 import PasswordGate from '@/components/PasswordGate'
+import AlienMascot from '@/components/AlienMascot'
 
 export default function HomePage() {
   return (
@@ -32,17 +33,22 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="mb-8">
-              <h1 className="font-display text-5xl tracking-wide leading-none" style={{ fontFamily: 'Bangers, cursive', letterSpacing: '3px' }}>
-                TOKYO
-                <span className="block" style={{ color: '#FFB300' }}>VIBES</span>
-                <span className="block text-3xl font-display text-white/70 mt-1" style={{ fontFamily: 'Bangers, cursive', letterSpacing: '4px' }}>
-                  2026
-                </span>
-              </h1>
-              <p className="text-white/60 text-sm mt-3 font-semibold tracking-wide">
-                🚀 東京 GOGO · To Infinity and Beyond!
-              </p>
+            <div className="mb-8 flex items-end justify-between">
+              <div>
+                <h1 className="font-display text-5xl tracking-wide leading-none" style={{ fontFamily: 'Bangers, cursive', letterSpacing: '3px' }}>
+                  TOKYO
+                  <span className="block" style={{ color: '#FFB300' }}>VIBES</span>
+                  <span className="block text-3xl font-display text-white/70 mt-1" style={{ fontFamily: 'Bangers, cursive', letterSpacing: '4px' }}>
+                    2026
+                  </span>
+                </h1>
+                <p className="text-white/60 text-sm mt-3 font-semibold tracking-wide">
+                  🚀 東京 GOGO · To Infinity and Beyond!
+                </p>
+              </div>
+              <div className="flex-shrink-0 animate-bounce-slow drop-shadow-lg">
+                <AlienMascot size={90} />
+              </div>
             </div>
 
             <div className="rounded-2xl p-5" style={{ background: 'rgba(0,0,0,0.25)', border: '2px solid rgba(255,215,0,0.4)' }}>
