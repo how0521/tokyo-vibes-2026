@@ -121,9 +121,9 @@ body {
   border-radius: 50%;
 }
 
-/* Countdown blocks — Buzz Lightyear suit style */
+/* Countdown blocks */
 .countdown-block {
-  background: linear-gradient(135deg, #4A148C 0%, #7B1FA2 100%);
+  background: linear-gradient(135deg, #0D47A1 0%, #1565C0 100%);
   border: 2px solid #FFD700;
   border-radius: 12px;
   min-width: 72px;

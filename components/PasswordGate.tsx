@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import AlienMascot from './AlienMascot'
+import CloudDecor from './CloudDecor'
 
 const PASSWORD = '890215'
 const STORAGE_KEY = 'tokyo_vibes_auth'
@@ -38,12 +39,10 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
     <div className="min-h-screen flex flex-col items-center justify-center px-6" style={{ background: 'linear-gradient(180deg, #0D47A1 0%, #1565C0 50%, #1976D2 100%)' }}>
       {/* Cloud decorations */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="cloud-drift absolute top-8 left-6 w-28 h-9 bg-white/80 rounded-full" />
-        <div className="cloud-drift-slow absolute top-10 left-12 w-20 h-7 bg-white/70 rounded-full" />
-        <div className="cloud-drift absolute top-20 right-8 w-32 h-10 bg-white/80 rounded-full" style={{ animationDelay: '-5s' }} />
-        <div className="cloud-drift-slow absolute top-24 right-14 w-20 h-8 bg-white/70 rounded-full" style={{ animationDelay: '-9s' }} />
-        <div className="cloud-drift absolute bottom-24 left-10 w-24 h-8 bg-white/60 rounded-full" style={{ animationDelay: '-3s' }} />
-        <div className="cloud-drift-slow absolute bottom-16 right-6 w-20 h-7 bg-white/60 rounded-full" style={{ animationDelay: '-11s' }} />
+        <CloudDecor className="cloud-drift absolute -top-2 left-2" width={130} opacity={0.8} />
+        <CloudDecor className="cloud-drift-slow absolute top-16 -right-4" width={150} opacity={0.75} style={{ animationDelay: '-5s' }} />
+        <CloudDecor className="cloud-drift absolute bottom-28 -left-4" width={120} opacity={0.65} style={{ animationDelay: '-3s' }} />
+        <CloudDecor className="cloud-drift-slow absolute bottom-10 right-2" width={110} opacity={0.6} style={{ animationDelay: '-9s' }} />
       </div>
 
       <div className="relative w-full max-w-sm">
@@ -90,7 +89,7 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
             className="w-full text-white font-bold rounded-2xl py-4 text-base transition-all duration-150 tracking-widest"
             style={{ background: '#C62828', border: '2px solid #2C1A0E', boxShadow: '3px 3px 0px #2C1A0E', fontFamily: 'Bangers, cursive', letterSpacing: '0.1em', fontSize: '1.2rem' }}
           >
-            🚀 進入手冊
+            🚀 進入
           </button>
         </form>
 

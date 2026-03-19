@@ -3,6 +3,7 @@ import CountdownTimer from '@/components/CountdownTimer'
 import TabLayout from '@/components/TabLayout'
 import PasswordGate from '@/components/PasswordGate'
 import AlienMascot from '@/components/AlienMascot'
+import CloudDecor from '@/components/CloudDecor'
 
 export default function HomePage() {
   return (
@@ -11,11 +12,9 @@ export default function HomePage() {
         {/* Header */}
         <header className="relative overflow-hidden text-white" style={{ background: 'linear-gradient(180deg, #0D47A1 0%, #1565C0 50%, #1976D2 100%)' }}>
           {/* Cloud decorations — animated */}
-          <div className="cloud-drift absolute top-5 left-6 w-24 h-8 bg-white/80 rounded-full" style={{ boxShadow: '0 2px 0 2px rgba(255,255,255,0.6)' }} />
-          <div className="cloud-drift-slow absolute top-7 left-10 w-16 h-5 bg-white/70 rounded-full" />
-          <div className="cloud-drift absolute top-4 right-4 w-28 h-9 bg-white/80 rounded-full" style={{ animationDelay: '-4s', boxShadow: '0 2px 0 2px rgba(255,255,255,0.6)' }} />
-          <div className="cloud-drift-slow absolute top-6 right-9 w-18 h-6 bg-white/70 rounded-full" style={{ animationDelay: '-7s' }} />
-          <div className="cloud-drift absolute bottom-16 left-2 w-20 h-6 bg-white/60 rounded-full" style={{ animationDelay: '-2s' }} />
+          <CloudDecor className="cloud-drift absolute -top-3 left-0" width={130} opacity={0.8} />
+          <CloudDecor className="cloud-drift-slow absolute top-2 right-0" width={150} opacity={0.75} style={{ animationDelay: '-4s' }} />
+          <CloudDecor className="cloud-drift absolute bottom-14 -left-4" width={110} opacity={0.55} style={{ animationDelay: '-2s' }} />
 
           <div className="relative px-5 pt-10 pb-8">
             <div className="flex items-center justify-between mb-6">
