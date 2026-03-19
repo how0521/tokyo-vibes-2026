@@ -22,8 +22,10 @@ html {
 }
 
 body {
-  background: linear-gradient(180deg, #87CEEB 0%, #B0D9F0 60%, #E8F4FD 100%);
+  background-image: url('/bg-clouds.jpg');
+  background-size: cover;
   background-attachment: fixed;
+  background-position: center top;
   min-height: 100vh;
   color: #1A237E;
   font-family: 'Nunito', 'Inter', system-ui, sans-serif;

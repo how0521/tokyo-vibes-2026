@@ -55,7 +55,7 @@ export default function TabLayout() {
 
         {active === 'spots' && <SpotsSection />}
 
-        <footer className="text-center py-4 text-xs text-mid-gray/60 pb-10">
+        <footer className="text-center py-4 text-xs pb-10" style={{ color: '#1A237E99' }}>
           <p className="font-bold">TOKYO VIBES 2026 · Made with 🤠</p>
           <p className="mt-0.5">即時同步 · Supabase Realtime</p>
           <p className="mt-0.5 text-[10px]">To Infinity and Beyond!</p>
