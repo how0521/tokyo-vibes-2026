@@ -11,10 +11,12 @@ export default function HomePage() {
       <div className="min-h-screen">
         {/* Header */}
         <header className="relative overflow-hidden text-white" style={{ background: 'linear-gradient(180deg, #0D47A1 0%, #1565C0 50%, #1976D2 100%)' }}>
-          {/* Cloud decorations — animated */}
-          <CloudDecor className="cloud-drift absolute -top-3 left-0" width={130} opacity={0.8} />
-          <CloudDecor className="cloud-drift-slow absolute top-2 right-0" width={150} opacity={0.75} style={{ animationDelay: '-4s' }} />
-          <CloudDecor className="cloud-drift absolute bottom-14 -left-4" width={110} opacity={0.55} style={{ animationDelay: '-2s' }} />
+          {/* Cloud decorations — animated, fully opaque */}
+          <CloudDecor className="cloud-drift absolute -top-4 -left-4" width={140} opacity={1} />
+          <CloudDecor className="cloud-drift-slow absolute -top-2 right-0" width={155} opacity={1} style={{ animationDelay: '-4s' }} />
+          <CloudDecor className="cloud-drift absolute top-16" width={100} opacity={1} style={{ left: '30%', animationDelay: '-7s' }} />
+          <CloudDecor className="cloud-drift-slow absolute bottom-20 -right-4" width={125} opacity={1} style={{ animationDelay: '-2s' }} />
+          <CloudDecor className="cloud-drift absolute bottom-10 -left-4" width={115} opacity={1} style={{ animationDelay: '-10s' }} />
 
           <div className="relative px-5 pt-10 pb-8">
             <div className="flex items-center justify-between mb-6">
@@ -22,13 +24,16 @@ export default function HomePage() {
                 <div className="w-8 h-8 bg-woody-yellow rounded-full flex items-center justify-center text-sm">
                   🤠
                 </div>
-                <p className="text-[10px] font-bold tracking-widest uppercase text-white/60">
+                <p className="text-[10px] font-bold tracking-widest uppercase"
+                  style={{ color: 'rgba(255,255,255,0.9)', textShadow: '0 1px 4px rgba(0,0,80,0.7)' }}>
                   Travel Guide
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-[10px] text-white/40 tracking-widest uppercase">6D5N · Tokyo</p>
-                <p className="text-[10px] text-white/40">May 20–25, 2026</p>
+                <p className="text-[10px] tracking-widest uppercase"
+                  style={{ color: 'rgba(255,255,255,0.85)', textShadow: '0 1px 4px rgba(0,0,80,0.7)' }}>6D5N · Tokyo</p>
+                <p className="text-[10px]"
+                  style={{ color: 'rgba(255,255,255,0.85)', textShadow: '0 1px 4px rgba(0,0,80,0.7)' }}>May 20–25, 2026</p>
               </div>
             </div>
 
