@@ -5,11 +5,12 @@
 @tailwind utilities;
 
 :root {
-  --cream: #E3F2FD;
-  --charcoal: #0D47A1;
-  --tokyo-red: #1E88E5;
-  --soft-border: #90CAF9;
+  --cream: #FFFDE7;
+  --charcoal: #1A237E;
+  --tokyo-red: #C62828;
+  --soft-border: #2C1A0E;
   --woody-yellow: #FFB300;
+  --toy-outline: #2C1A0E;
 }
 
 * {
@@ -21,9 +22,12 @@ html {
 }
 
 body {
-  background-color: #E3F2FD;
-  color: #0D47A1;
+  background: linear-gradient(180deg, #87CEEB 0%, #B0D9F0 60%, #E8F4FD 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  color: #1A237E;
   font-family: 'Nunito', 'Inter', system-ui, sans-serif;
+  font-weight: 700;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -34,40 +38,77 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #BBDEFB;
+  background: #B0D9F0;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #90CAF9;
+  background: #FFB300;
   border-radius: 4px;
 }
 
 @layer components {
   .card {
-    @apply bg-white rounded-2xl border border-soft-border shadow-sm;
+    background: #FFFDE7;
+    border: 3px solid #2C1A0E;
+    border-radius: 16px;
+    box-shadow: 4px 4px 0px #2C1A0E;
   }
 
   .btn-primary {
-    @apply bg-tokyo-red text-white font-bold rounded-xl px-5 py-3
-           active:bg-tokyo-red-dark transition-colors duration-150
-           min-h-[48px] flex items-center justify-center gap-2 text-sm;
+    @apply text-white font-bold rounded-xl px-5 py-3
+           transition-all duration-150
+           min-h-[48px] flex items-center justify-center gap-2;
+    background: #C62828;
+    border: 2px solid #2C1A0E;
+    box-shadow: 3px 3px 0px #2C1A0E;
+    font-family: 'Bangers', cursive;
+    letter-spacing: 0.08em;
+    font-size: 1.1rem;
+  }
+
+  .btn-primary:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0px #2C1A0E;
+  }
+
+  .btn-primary:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0px #2C1A0E;
   }
 
   .btn-outline {
-    @apply border border-soft-border text-charcoal font-semibold rounded-xl px-5 py-3
-           active:bg-warm-gray transition-colors duration-150
+    @apply font-semibold rounded-xl px-5 py-3
+           transition-all duration-150
            min-h-[48px] flex items-center justify-center gap-2 text-sm;
+    background: #FFFDE7;
+    border: 2px solid #2C1A0E;
+    box-shadow: 2px 2px 0px #2C1A0E;
+    color: #1A237E;
+  }
+
+  .btn-outline:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0px #2C1A0E;
+  }
+
+  .btn-outline:active {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0px #2C1A0E;
   }
 
   .section-title {
-    @apply text-xs font-bold tracking-widest uppercase text-mid-gray mb-4;
+    @apply text-xs font-bold tracking-widest uppercase mb-4;
+    color: #8B4513;
+    font-family: 'Bangers', cursive;
+    letter-spacing: 0.15em;
+    font-size: 0.8rem;
   }
 }
 
 /* Cloud decoration */
 .cloud {
   position: absolute;
-  background: rgba(255,255,255,0.85);
+  background: rgba(255,255,255,0.9);
   border-radius: 50px;
   filter: blur(1px);
 }
@@ -76,27 +117,26 @@ body {
 .cloud::after {
   content: '';
   position: absolute;
-  background: rgba(255,255,255,0.85);
+  background: rgba(255,255,255,0.9);
   border-radius: 50%;
 }
 
-/* Countdown flip style */
+/* Countdown blocks — Buzz Lightyear suit style */
 .countdown-block {
-  background: white;
-  border: 2px solid #90CAF9;
-  border-radius: 16px;
+  background: linear-gradient(135deg, #4A148C 0%, #7B1FA2 100%);
+  border: 2px solid #FFD700;
+  border-radius: 12px;
   min-width: 72px;
   padding: 12px 8px 8px;
   text-align: center;
-  box-shadow: 0 4px 12px rgba(30,136,229,0.15);
+  box-shadow: 3px 3px 0px #2C1A0E;
 }
 
 .countdown-number {
   font-size: 2.25rem;
   font-weight: 800;
   line-height: 1;
-  color: #FFB300;
-  letter-spacing: -1px;
+  color: #FFD700;
   font-variant-numeric: tabular-nums;
   font-family: 'Bangers', cursive;
   letter-spacing: 2px;
@@ -107,20 +147,20 @@ body {
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #78909C;
+  color: rgba(255, 255, 255, 0.8);
   margin-top: 4px;
 }
 
 /* Tab underline */
 .tab-active {
-  border-bottom: 2px solid #FFB300;
+  border-bottom: 3px solid #FFB300;
   color: #FFB300;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 /* Checkbox custom style */
 input[type="checkbox"] {
-  accent-color: #1E88E5;
+  accent-color: #C62828;
   width: 20px;
   height: 20px;
   cursor: pointer;
@@ -137,4 +177,18 @@ input[type="checkbox"] {
 .stars-bg {
   background-image: radial-gradient(circle, rgba(255,255,255,0.6) 1px, transparent 1px);
   background-size: 30px 30px;
+}
+
+/* Drifting clouds keyframe */
+@keyframes drift {
+  from { transform: translateX(-10px); }
+  to   { transform: translateX(10px); }
+}
+
+.cloud-drift {
+  animation: drift 8s ease-in-out infinite alternate;
+}
+
+.cloud-drift-slow {
+  animation: drift 14s ease-in-out infinite alternate;
 }

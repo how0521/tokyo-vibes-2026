@@ -21,7 +21,7 @@ export default function TabLayout() {
   return (
     <div>
       {/* Tab Bar */}
-      <div className="sticky top-0 z-10 bg-cream/95 backdrop-blur-sm border-b border-soft-border">
+      <div className="sticky top-0 z-10 backdrop-blur-sm" style={{ background: '#FFFDE7', borderBottom: '3px solid #2C1A0E', boxShadow: '0 3px 0px #2C1A0E' }}>
         <div className="flex max-w-lg mx-auto">
           {TABS.map(({ id, label, icon: Icon }) => (
             <button

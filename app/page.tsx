@@ -6,15 +6,15 @@ import PasswordGate from '@/components/PasswordGate'
 export default function HomePage() {
   return (
     <PasswordGate>
-      <div className="min-h-screen bg-cream">
+      <div className="min-h-screen">
         {/* Header */}
-        <header className="relative overflow-hidden bg-charcoal text-white">
-          {/* Cloud decorations */}
-          <div className="absolute top-4 left-8 w-20 h-7 bg-white/20 rounded-full blur-sm" />
-          <div className="absolute top-4 left-12 w-14 h-5 bg-white/15 rounded-full blur-sm" />
-          <div className="absolute top-10 right-6 w-24 h-8 bg-white/15 rounded-full blur-sm" />
-          <div className="absolute top-10 right-10 w-16 h-6 bg-white/10 rounded-full blur-sm" />
-          <div className="absolute bottom-12 left-4 w-16 h-5 bg-white/10 rounded-full blur-sm" />
+        <header className="relative overflow-hidden text-white" style={{ background: 'linear-gradient(180deg, #0D47A1 0%, #1565C0 50%, #1976D2 100%)' }}>
+          {/* Cloud decorations — animated */}
+          <div className="cloud-drift absolute top-5 left-6 w-24 h-8 bg-white/80 rounded-full" style={{ boxShadow: '0 2px 0 2px rgba(255,255,255,0.6)' }} />
+          <div className="cloud-drift-slow absolute top-7 left-10 w-16 h-5 bg-white/70 rounded-full" />
+          <div className="cloud-drift absolute top-4 right-4 w-28 h-9 bg-white/80 rounded-full" style={{ animationDelay: '-4s', boxShadow: '0 2px 0 2px rgba(255,255,255,0.6)' }} />
+          <div className="cloud-drift-slow absolute top-6 right-9 w-18 h-6 bg-white/70 rounded-full" style={{ animationDelay: '-7s' }} />
+          <div className="cloud-drift absolute bottom-16 left-2 w-20 h-6 bg-white/60 rounded-full" style={{ animationDelay: '-2s' }} />
 
           <div className="relative px-5 pt-10 pb-8">
             <div className="flex items-center justify-between mb-6">
@@ -45,7 +45,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="bg-white/10 border border-white/20 rounded-2xl p-5 backdrop-blur-sm">
+            <div className="rounded-2xl p-5" style={{ background: 'rgba(0,0,0,0.25)', border: '2px solid rgba(255,215,0,0.4)' }}>
               <Suspense fallback={<div className="h-24" />}>
                 <CountdownTimer />
               </Suspense>

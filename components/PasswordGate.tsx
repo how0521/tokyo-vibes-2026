@@ -34,15 +34,15 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
   if (authed) return <>{children}</>
 
   return (
-    <div className="min-h-screen bg-charcoal flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen flex flex-col items-center justify-center px-6" style={{ background: 'linear-gradient(180deg, #0D47A1 0%, #1565C0 50%, #1976D2 100%)' }}>
       {/* Cloud decorations */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-8 left-6 w-28 h-9 bg-white/15 rounded-full blur-sm" />
-        <div className="absolute top-8 left-12 w-20 h-7 bg-white/10 rounded-full blur-sm" />
-        <div className="absolute top-20 right-8 w-32 h-10 bg-white/15 rounded-full blur-sm" />
-        <div className="absolute top-20 right-14 w-20 h-8 bg-white/10 rounded-full blur-sm" />
-        <div className="absolute bottom-24 left-10 w-24 h-8 bg-white/10 rounded-full blur-sm" />
-        <div className="absolute bottom-16 right-6 w-20 h-7 bg-white/10 rounded-full blur-sm" />
+        <div className="cloud-drift absolute top-8 left-6 w-28 h-9 bg-white/80 rounded-full" />
+        <div className="cloud-drift-slow absolute top-10 left-12 w-20 h-7 bg-white/70 rounded-full" />
+        <div className="cloud-drift absolute top-20 right-8 w-32 h-10 bg-white/80 rounded-full" style={{ animationDelay: '-5s' }} />
+        <div className="cloud-drift-slow absolute top-24 right-14 w-20 h-8 bg-white/70 rounded-full" style={{ animationDelay: '-9s' }} />
+        <div className="cloud-drift absolute bottom-24 left-10 w-24 h-8 bg-white/60 rounded-full" style={{ animationDelay: '-3s' }} />
+        <div className="cloud-drift-slow absolute bottom-16 right-6 w-20 h-7 bg-white/60 rounded-full" style={{ animationDelay: '-11s' }} />
       </div>
 
       <div className="relative w-full max-w-sm">
@@ -84,8 +84,8 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
 
           <button
             type="submit"
-            className="w-full bg-tokyo-red text-white font-bold rounded-2xl py-4 text-base
-              active:bg-tokyo-red-dark transition-colors duration-150 tracking-wide"
+            className="w-full text-white font-bold rounded-2xl py-4 text-base transition-all duration-150 tracking-widest"
+            style={{ background: '#C62828', border: '2px solid #2C1A0E', boxShadow: '3px 3px 0px #2C1A0E', fontFamily: 'Bangers, cursive', letterSpacing: '0.1em', fontSize: '1.2rem' }}
           >
             🚀 進入手冊
           </button>
