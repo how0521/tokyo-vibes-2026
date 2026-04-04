@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import {
   MapPin, Plus, Trash2, Clock, StickyNote, X, Check,
-  ExternalLink, Loader2, AlertTriangle
+  ExternalLink, Loader2, AlertTriangle, Sparkles
 } from 'lucide-react'
 import {
   supabase, fetchItinerary, addItineraryItem,
@@ -604,6 +604,34 @@ function SpotFormFields({
   showTransit?: boolean
 }) {
   const modes: TransitMode[] = ['walk', 'train', 'taxi', 'bus']
+  const titleInputRef = useRef<HTMLInputElement>(null)
+  const formRef = useRef(form)
+  useEffect(() => { formRef.current = form }, [form])
+
+  useEffect(() => {
+    const input = titleInputRef.current
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const g = (window as any).google
+    if (!input || !g) return
+
+    const autocomplete = new g.maps.places.Autocomplete(input, {
+      fields: ['name', 'place_id'],
+      componentRestrictions: { country: 'jp' },
+    })
+
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace()
+      if (!place.place_id) return
+      setForm({
+        ...formRef.current,
+        title: place.name ?? formRef.current.title,
+        map_url: `https://www.google.com/maps/place/?q=place_id:${place.place_id}`,
+      })
+    })
+
+    return () => g.maps.event.clearInstanceListeners(autocomplete)
+  }, [setForm])
+
   return (
     <div className="space-y-3">
       <div className="flex gap-3">
@@ -630,6 +658,7 @@ function SpotFormFields({
       <div>
         <label className="text-xs text-mid-gray font-medium mb-1 block">景點名稱 *</label>
         <input
+          ref={titleInputRef}
           type="text"
           value={form.title}
           onChange={(e) => setForm({ ...form, title: e.target.value })}
@@ -674,13 +703,27 @@ function SpotFormFields({
       )}
       <div>
         <label className="text-xs text-mid-gray font-medium mb-1 block">Google Maps URL（選填）</label>
-        <input
-          type="url"
-          value={form.map_url}
-          onChange={(e) => setForm({ ...form, map_url: e.target.value })}
-          placeholder="https://maps.google.com/..."
-          className={inputClass}
-        />
+        <div className="flex gap-2">
+          <input
+            type="url"
+            value={form.map_url}
+            onChange={(e) => setForm({ ...form, map_url: e.target.value })}
+            placeholder="https://maps.google.com/..."
+            className={inputClass}
+          />
+          <button
+            type="button"
+            disabled={!form.title.trim()}
+            title="自動產生 Google Maps 搜尋連結"
+            onClick={() => {
+              const query = encodeURIComponent(form.title.trim() + ' 東京')
+              setForm({ ...form, map_url: `https://www.google.com/maps/search/?api=1&query=${query}` })
+            }}
+            className="flex-shrink-0 px-3 py-3 rounded-xl bg-woody-yellow text-charcoal disabled:opacity-40 transition-opacity"
+          >
+            <Sparkles size={16} />
+          </button>
+        </div>
       </div>
       <div>
         <label className="text-xs text-mid-gray font-medium mb-1 block">備注（選填）</label>
