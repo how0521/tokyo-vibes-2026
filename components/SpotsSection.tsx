@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { MapPin, Plus, Trash2, Loader2, X, ExternalLink } from 'lucide-react'
+import { MapPin, Plus, Trash2, Loader2, X, ExternalLink, Sparkles } from 'lucide-react'
 import { supabase, fetchSpots, addSpot, deleteSpot } from '@/lib/supabase'
 import type { Spot, SpotCategory } from '@/lib/types'
 import { SPOT_CATEGORY_LABELS } from '@/lib/types'
@@ -255,6 +255,13 @@ export default function SpotsSection() {
     await deleteSpot(id)
   }
 
+  function handleFindMap() {
+    if (!form.name.trim()) return
+    const query = encodeURIComponent(form.name.trim() + ' 東京')
+    const url = `https://www.google.com/maps/search/?api=1&query=${query}`
+    setForm({ ...form, map_url: url })
+  }
+
   const existingAreas = Array.from(new Set(spots.map((s) => s.area)))
 
   return (
@@ -389,12 +396,23 @@ export default function SpotsSection() {
                 value={form.image_url}
                 onChange={(e) => setForm({ ...form, image_url: e.target.value })}
               />
-              <input
-                className={inputClass}
-                placeholder="Google Maps URL"
-                value={form.map_url}
-                onChange={(e) => setForm({ ...form, map_url: e.target.value })}
-              />
+              <div className="flex gap-2">
+                <input
+                  className={inputClass}
+                  placeholder="Google Maps URL"
+                  value={form.map_url}
+                  onChange={(e) => setForm({ ...form, map_url: e.target.value })}
+                />
+                <button
+                  type="button"
+                  onClick={handleFindMap}
+                  disabled={!form.name.trim()}
+                  title="自動產生 Google Maps 搜尋連結"
+                  className="flex-shrink-0 px-3 py-3 rounded-xl bg-woody-yellow text-charcoal disabled:opacity-40 transition-opacity"
+                >
+                  <Sparkles size={16} />
+                </button>
+              </div>
               <button
                 type="submit"
                 disabled={saving}
