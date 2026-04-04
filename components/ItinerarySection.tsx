@@ -403,7 +403,7 @@ export default function ItinerarySection() {
                       <p className={`text-sm font-semibold text-charcoal leading-snug ${item.is_done ? 'line-through' : ''}`}>
                         {item.title}
                       </p>
-                      <p className="text-[10px] text-mid-gray mt-0.5">停留 {item.stay_duration ?? 60} 分鐘</p>
+                      <p className="text-[10px] text-mid-gray mt-0.5">停留 {(() => { const m = item.stay_duration ?? 60; if (m < 60) return `${m} 分鐘`; const h = Math.floor(m / 60); const min = m % 60; return min > 0 ? `${h} 小時 ${min} 分鐘` : `${h} 小時` })()} </p>
                       {item.notes && (
                         <div className="flex items-start gap-1 mt-1.5">
                           <StickyNote size={11} className="text-mid-gray mt-0.5 shrink-0" />
