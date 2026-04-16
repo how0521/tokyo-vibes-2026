@@ -3,8 +3,24 @@
 import { useEffect, useState, useRef } from 'react'
 import {
   MapPin, Plus, Trash2, Clock, StickyNote, X, Check,
-  ExternalLink, Loader2, AlertTriangle, Sparkles
+  ExternalLink, Loader2, AlertTriangle, Sparkles,
+  GripVertical, ChevronUp, ChevronDown
 } from 'lucide-react'
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import {
   supabase, fetchItinerary, addItineraryItem,
   updateItineraryItem, deleteItineraryItem, batchUpdateTimes
@@ -297,6 +313,55 @@ export default function ItinerarySection() {
     }
   }
 
+  // ── 拖曳感測器（需拖曳 5px 才觸發，避免干擾點擊）──
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  )
+
+  // ── 重新排序後重算時間鏈 ──
+  async function reorderDayItems(newDayItems: ItineraryItem[]) {
+    if (newDayItems.length === 0) return
+    const originalFirstTime = dayItems[0].time
+    const ordered = [...newDayItems]
+    ordered[0] = { ...ordered[0], time: originalFirstTime }
+
+    const chainUpdates = recomputeChain([...ordered], 0)
+
+    const updatesMap = new Map<string, string>([
+      [ordered[0].id, ordered[0].time],
+      ...chainUpdates.map(u => [u.id, u.time] as [string, string])
+    ])
+
+    setItems(prev => {
+      const otherItems = prev.filter(i => i.day_num !== activeDay)
+      const updatedDayItems = ordered.map(i => ({
+        ...i,
+        time: updatesMap.get(i.id) ?? i.time
+      }))
+      return [...otherItems, ...updatedDayItems]
+    })
+
+    const dbUpdates = Array.from(updatesMap.entries()).map(([id, time]) => ({ id, time }))
+    if (dbUpdates.length > 0) await batchUpdateTimes(dbUpdates)
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIndex = dayItems.findIndex(i => i.id === active.id)
+    const newIndex = dayItems.findIndex(i => i.id === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+    reorderDayItems(arrayMove([...dayItems], oldIndex, newIndex))
+  }
+
+  async function handleMoveItem(id: string, direction: 'up' | 'down') {
+    const idx = dayItems.findIndex(i => i.id === id)
+    if (direction === 'up' && idx <= 0) return
+    if (direction === 'down' && idx >= dayItems.length - 1) return
+    const newIdx = direction === 'up' ? idx - 1 : idx + 1
+    await reorderDayItems(arrayMove([...dayItems], idx, newIdx))
+  }
+
   const doneCount = dayItems.filter((i) => i.is_done).length
 
   return (
@@ -353,89 +418,31 @@ export default function ItinerarySection() {
             </div>
           )}
 
-          {dayItems.map((item, idx) => {
-            const endTime = calcEndTime(item.time, item.stay_duration ?? 60)
-            const isFirst = idx === 0
-            return (
-              <div key={item.id}>
-                {/* Transit Block（第一個景點不顯示）*/}
-                {!isFirst && (
-                  <TransitBlock
-                    item={item}
-                    onCycleMode={() => cycleTransitMode(item)}
-                    onUpdateDuration={(min) => updateTransitDuration(item, min)}
-                  />
-                )}
-
-                {/* Spot Card */}
-                {editingId === item.id ? (
-                  <EditCard
-                    item={item}
-                    editForm={editForm}
-                    setEditForm={setEditForm}
-                    saving={saving}
-                    onSave={() => handleEditSave(item.id, editForm)}
-                    onCancel={() => setEditingId(null)}
-                  />
-                ) : (
-                  <div
-                    className={`card p-4 flex gap-3 transition-opacity duration-200 ${item.is_done ? 'opacity-60' : ''}`}
-                  >
-                    <div className="pt-0.5">
-                      <input
-                        type="checkbox"
-                        checked={item.is_done}
-                        onChange={() => handleToggle(item)}
-                        aria-label={`標記 ${item.title} 完成`}
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0" onClick={() => startEdit(item)}>
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <div className="flex items-center gap-1 text-xs text-tokyo-red font-semibold">
-                          <Clock size={11} />
-                          {item.time}
-                        </div>
-                        {/* 預計離開時間 */}
-                        <div className="text-[10px] text-mid-gray bg-warm-gray px-2 py-0.5 rounded-full">
-                          離開 {endTime}
-                        </div>
-                      </div>
-                      <p className={`text-sm font-semibold text-charcoal leading-snug ${item.is_done ? 'line-through' : ''}`}>
-                        {item.title}
-                      </p>
-                      <p className="text-[10px] text-mid-gray mt-0.5">停留 {(() => { const m = item.stay_duration ?? 60; if (m < 60) return `${m} 分鐘`; const h = Math.floor(m / 60); const min = m % 60; return min > 0 ? `${h} 小時 ${min} 分鐘` : `${h} 小時` })()} </p>
-                      {item.notes && (
-                        <div className="flex items-start gap-1 mt-1.5">
-                          <StickyNote size={11} className="text-mid-gray mt-0.5 shrink-0" />
-                          <p className="text-xs text-mid-gray leading-relaxed">{item.notes}</p>
-                        </div>
-                      )}
-                      {item.map_url && (
-                        <a
-                          href={item.map_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-1 mt-2 text-xs text-blue-500 font-medium"
-                        >
-                          <MapPin size={11} />
-                          Google Maps
-                          <ExternalLink size={10} />
-                        </a>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => handleDelete(item.id)}
-                      className="p-2 text-mid-gray active:text-tokyo-red transition-colors self-start rounded-lg"
-                      aria-label="刪除"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                )}
-              </div>
-            )
-          })}
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={dayItems.map(i => i.id)} strategy={verticalListSortingStrategy}>
+              {dayItems.map((item, idx) => (
+                <SortableItemRow
+                  key={item.id}
+                  item={item}
+                  idx={idx}
+                  totalItems={dayItems.length}
+                  editingId={editingId}
+                  editForm={editForm}
+                  setEditForm={setEditForm}
+                  saving={saving}
+                  onEditSave={() => handleEditSave(item.id, editForm)}
+                  onEditCancel={() => setEditingId(null)}
+                  onStartEdit={() => startEdit(item)}
+                  onToggle={() => handleToggle(item)}
+                  onDelete={() => handleDelete(item.id)}
+                  onMoveUp={() => handleMoveItem(item.id, 'up')}
+                  onMoveDown={() => handleMoveItem(item.id, 'down')}
+                  onCycleTransitMode={() => cycleTransitMode(item)}
+                  onUpdateTransitDuration={(min) => updateTransitDuration(item, min)}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
         </div>
       )}
 
@@ -495,6 +502,140 @@ export default function ItinerarySection() {
                 取消
               </button>
             </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── 子組件：可排序景點列 ──
+function SortableItemRow({
+  item, idx, totalItems,
+  editingId, editForm, setEditForm, saving,
+  onEditSave, onEditCancel, onStartEdit, onToggle, onDelete,
+  onMoveUp, onMoveDown, onCycleTransitMode, onUpdateTransitDuration,
+}: {
+  item: ItineraryItem
+  idx: number
+  totalItems: number
+  editingId: string | null
+  editForm: typeof EMPTY_FORM
+  setEditForm: (f: typeof EMPTY_FORM) => void
+  saving: boolean
+  onEditSave: () => void
+  onEditCancel: () => void
+  onStartEdit: () => void
+  onToggle: () => void
+  onDelete: () => void
+  onMoveUp: () => void
+  onMoveDown: () => void
+  onCycleTransitMode: () => void
+  onUpdateTransitDuration: (min: number) => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
+  const isFirst = idx === 0
+  const endTime = calcEndTime(item.time, item.stay_duration ?? 60)
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1, zIndex: isDragging ? 10 : undefined }}
+    >
+      {!isFirst && (
+        <TransitBlock item={item} onCycleMode={onCycleTransitMode} onUpdateDuration={onUpdateTransitDuration} />
+      )}
+
+      {editingId === item.id ? (
+        <EditCard
+          item={item}
+          editForm={editForm}
+          setEditForm={setEditForm}
+          saving={saving}
+          onSave={onEditSave}
+          onCancel={onEditCancel}
+        />
+      ) : (
+        <div className={`card p-4 flex gap-2 transition-opacity duration-200 ${item.is_done ? 'opacity-60' : ''}`}>
+          {/* Drag Handle */}
+          <button
+            {...listeners}
+            {...attributes}
+            className="text-mid-gray/40 hover:text-mid-gray transition-colors cursor-grab active:cursor-grabbing self-start pt-0.5 touch-none"
+            aria-label="拖曳排序"
+            tabIndex={-1}
+          >
+            <GripVertical size={15} />
+          </button>
+          {/* Checkbox */}
+          <div className="pt-0.5">
+            <input
+              type="checkbox"
+              checked={item.is_done}
+              onChange={onToggle}
+              aria-label={`標記 ${item.title} 完成`}
+            />
+          </div>
+          {/* Content */}
+          <div className="flex-1 min-w-0" onClick={onStartEdit}>
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <div className="flex items-center gap-1 text-xs text-tokyo-red font-semibold">
+                <Clock size={11} />
+                {item.time}
+              </div>
+              <div className="text-[10px] text-mid-gray bg-warm-gray px-2 py-0.5 rounded-full">
+                離開 {endTime}
+              </div>
+            </div>
+            <p className={`text-sm font-semibold text-charcoal leading-snug ${item.is_done ? 'line-through' : ''}`}>
+              {item.title}
+            </p>
+            <p className="text-[10px] text-mid-gray mt-0.5">停留 {(() => { const m = item.stay_duration ?? 60; if (m < 60) return `${m} 分鐘`; const h = Math.floor(m / 60); const min = m % 60; return min > 0 ? `${h} 小時 ${min} 分鐘` : `${h} 小時` })()} </p>
+            {item.notes && (
+              <div className="flex items-start gap-1 mt-1.5">
+                <StickyNote size={11} className="text-mid-gray mt-0.5 shrink-0" />
+                <p className="text-xs text-mid-gray leading-relaxed">{item.notes}</p>
+              </div>
+            )}
+            {item.map_url && (
+              <a
+                href={item.map_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1 mt-2 text-xs text-blue-500 font-medium"
+              >
+                <MapPin size={11} />
+                Google Maps
+                <ExternalLink size={10} />
+              </a>
+            )}
+          </div>
+          {/* Actions */}
+          <div className="flex flex-col items-center gap-0.5 self-start">
+            <button
+              onClick={onMoveUp}
+              disabled={idx === 0}
+              className="p-1.5 text-mid-gray disabled:opacity-20 hover:text-charcoal transition-colors rounded-lg"
+              aria-label="上移"
+            >
+              <ChevronUp size={14} />
+            </button>
+            <button
+              onClick={onMoveDown}
+              disabled={idx === totalItems - 1}
+              className="p-1.5 text-mid-gray disabled:opacity-20 hover:text-charcoal transition-colors rounded-lg"
+              aria-label="下移"
+            >
+              <ChevronDown size={14} />
+            </button>
+            <button
+              onClick={onDelete}
+              className="p-1.5 text-mid-gray hover:text-tokyo-red transition-colors rounded-lg mt-0.5"
+              aria-label="刪除"
+            >
+              <Trash2 size={14} />
+            </button>
           </div>
         </div>
       )}
