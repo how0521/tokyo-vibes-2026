@@ -104,6 +104,22 @@ export async function addSpot(
   return data
 }
 
+export async function updateSpot(
+  id: string,
+  updates: Partial<Omit<Spot, 'id' | 'created_at'>>
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('spots')
+    .update(updates)
+    .eq('id', id)
+
+  if (error) {
+    console.error('updateSpot error:', error.message)
+    return false
+  }
+  return true
+}
+
 export async function deleteSpot(id: string): Promise<boolean> {
   const { error } = await supabase
     .from('spots')

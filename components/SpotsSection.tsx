@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { MapPin, Plus, Trash2, Loader2, X, ExternalLink, Sparkles } from 'lucide-react'
-import { supabase, fetchSpots, addSpot, deleteSpot } from '@/lib/supabase'
+import { MapPin, Plus, Trash2, Loader2, X, ExternalLink, Sparkles, Pencil, Check } from 'lucide-react'
+import { supabase, fetchSpots, addSpot, updateSpot, deleteSpot } from '@/lib/supabase'
 import type { Spot, SpotCategory } from '@/lib/types'
 import { SPOT_CATEGORY_LABELS } from '@/lib/types'
 
@@ -27,22 +27,95 @@ const CATEGORY_OPTIONS: Array<{ value: 'all' | SpotCategory; label: string }> = 
 
 // ── Detail Modal ──────────────────────────────────────────────────────────────
 
-function SpotDetailModal({ spot, onClose, onDelete }: {
+function SpotDetailModal({ spot, onClose, onDelete, onSave }: {
   spot: Spot
   onClose: () => void
   onDelete: (id: string) => void
+  onSave: (id: string, updates: Partial<Omit<Spot, 'id' | 'created_at'>>) => Promise<void>
 }) {
   const [imgError, setImgError] = useState(false)
+  const [editMode, setEditMode] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [editForm, setEditForm] = useState({
+    name: spot.name,
+    name_jp: spot.name_jp ?? '',
+    category: spot.category,
+    area: spot.area,
+    description: spot.description ?? '',
+    image_url: spot.image_url ?? '',
+    map_url: spot.map_url ?? '',
+  })
+  const editNameRef = useRef<HTMLInputElement>(null)
+  const editFormRef = useRef(editForm)
+  useEffect(() => { editFormRef.current = editForm }, [editForm])
+
+  useEffect(() => {
+    if (!editMode) return
+    const input = editNameRef.current
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const g = (window as any).google
+    if (!input || !g) return
+
+    const autocomplete = new g.maps.places.Autocomplete(input, {
+      fields: ['name', 'place_id', 'photos', 'editorial_summary', 'vicinity', 'types'],
+      componentRestrictions: { country: 'jp' },
+    })
+
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace()
+      if (!place.place_id) return
+
+      const types: string[] = place.types ?? []
+      const isRestaurant = types.some((t: string) =>
+        ['restaurant', 'food', 'bar', 'cafe', 'meal_takeaway', 'meal_delivery', 'bakery'].includes(t)
+      )
+      let imageUrl = ''
+      if (place.photos && place.photos.length > 0) {
+        imageUrl = place.photos[0].getUrl({ maxWidth: 800 })
+      }
+      const area = (place.vicinity ?? '').split(',')[0].trim()
+
+      setEditForm({
+        ...editFormRef.current,
+        name: place.name ?? editFormRef.current.name,
+        category: isRestaurant ? 'restaurant' : 'spot',
+        area: area || editFormRef.current.area,
+        description: place.editorial_summary?.overview ?? editFormRef.current.description,
+        image_url: imageUrl || editFormRef.current.image_url,
+        map_url: `https://www.google.com/maps/place/?q=place_id:${place.place_id}`,
+      })
+    })
+
+    return () => g.maps.event.clearInstanceListeners(autocomplete)
+  }, [editMode])
+
+  async function handleSave() {
+    if (!editForm.name.trim()) return
+    setSaving(true)
+    await onSave(spot.id, {
+      name: editForm.name.trim(),
+      name_jp: editForm.name_jp.trim() || null,
+      category: editForm.category,
+      area: editForm.area.trim(),
+      description: editForm.description.trim() || null,
+      image_url: editForm.image_url.trim() || null,
+      map_url: editForm.map_url.trim() || null,
+    })
+    setSaving(false)
+    setEditMode(false)
+  }
 
   function handleDelete() {
     onDelete(spot.id)
     onClose()
   }
 
+  const displayImage = editMode ? editForm.image_url : spot.image_url
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm"
-      onClick={onClose}
+      onClick={editMode ? undefined : onClose}
     >
       <div
         className="w-full max-w-lg bg-cream rounded-t-3xl overflow-hidden max-h-[90vh] flex flex-col"
@@ -50,9 +123,9 @@ function SpotDetailModal({ spot, onClose, onDelete }: {
       >
         {/* Image */}
         <div className="aspect-video bg-warm-gray relative flex-shrink-0">
-          {spot.image_url && !imgError ? (
+          {displayImage && !imgError ? (
             <img
-              src={spot.image_url}
+              src={displayImage}
               alt={spot.name}
               className="w-full h-full object-cover"
               onError={() => setImgError(true)}
@@ -62,67 +135,155 @@ function SpotDetailModal({ spot, onClose, onDelete }: {
               <MapPin size={48} className="text-mid-gray/30" />
             </div>
           )}
-          {/* Close button */}
           <button
-            onClick={onClose}
+            onClick={editMode ? () => setEditMode(false) : onClose}
             className="absolute top-3 right-3 p-1.5 rounded-full bg-black/40 text-white backdrop-blur-sm"
           >
             <X size={16} />
           </button>
-          {/* Category badge */}
           <span className={`absolute top-3 left-3 text-[11px] font-bold px-2.5 py-1 rounded-full ${
-            spot.category === 'restaurant'
+            (editMode ? editForm.category : spot.category) === 'restaurant'
               ? 'bg-tokyo-red text-white'
               : 'bg-woody-yellow text-charcoal'
           }`}>
-            {SPOT_CATEGORY_LABELS[spot.category]}
+            {SPOT_CATEGORY_LABELS[editMode ? editForm.category : spot.category]}
           </span>
         </div>
 
         {/* Content */}
         <div className="p-5 overflow-y-auto space-y-3">
-          <div>
-            <p className="text-[11px] text-mid-gray mb-0.5">{spot.area}</p>
-            <h2 className="text-xl font-black text-charcoal leading-tight">{spot.name}</h2>
-            {spot.name_jp && (
-              <p className="text-sm text-mid-gray mt-0.5">{spot.name_jp}</p>
-            )}
-          </div>
+          {editMode ? (
+            <>
+              <div className="space-y-3">
+                <input
+                  ref={editNameRef}
+                  className={inputClass}
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  placeholder="名稱 *"
+                  autoFocus
+                />
+                <input
+                  className={inputClass}
+                  value={editForm.name_jp}
+                  onChange={(e) => setEditForm({ ...editForm, name_jp: e.target.value })}
+                  placeholder="日文名稱"
+                />
+                <select
+                  className={inputClass}
+                  value={editForm.category}
+                  onChange={(e) => setEditForm({ ...editForm, category: e.target.value as SpotCategory })}
+                >
+                  <option value="spot">景點</option>
+                  <option value="restaurant">餐廳</option>
+                </select>
+                <input
+                  className={inputClass}
+                  value={editForm.area}
+                  onChange={(e) => setEditForm({ ...editForm, area: e.target.value })}
+                  placeholder="區域 *"
+                />
+                <textarea
+                  className={inputClass}
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  placeholder="說明"
+                  rows={3}
+                />
+                <input
+                  className={inputClass}
+                  value={editForm.image_url}
+                  onChange={(e) => { setEditForm({ ...editForm, image_url: e.target.value }); setImgError(false) }}
+                  placeholder="圖片 URL"
+                />
+                <div className="flex gap-2">
+                  <input
+                    className={inputClass}
+                    value={editForm.map_url}
+                    onChange={(e) => setEditForm({ ...editForm, map_url: e.target.value })}
+                    placeholder="Google Maps URL"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const query = encodeURIComponent(editForm.name.trim() + ' 東京')
+                      setEditForm({ ...editForm, map_url: `https://www.google.com/maps/search/?api=1&query=${query}` })
+                    }}
+                    disabled={!editForm.name.trim()}
+                    className="flex-shrink-0 px-3 py-3 rounded-xl bg-woody-yellow text-charcoal disabled:opacity-40"
+                  >
+                    <Sparkles size={16} />
+                  </button>
+                </div>
+              </div>
+              <div className="flex gap-2 pb-4">
+                <button
+                  onClick={handleSave}
+                  disabled={saving || !editForm.name.trim()}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-woody-yellow text-charcoal font-bold rounded-2xl text-sm disabled:opacity-50"
+                >
+                  {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+                  儲存
+                </button>
+                <button
+                  onClick={() => setEditMode(false)}
+                  className="px-4 py-3 rounded-2xl border border-soft-border text-mid-gray"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <p className="text-[11px] text-mid-gray mb-0.5">{spot.area}</p>
+                <h2 className="text-xl font-black text-charcoal leading-tight">{spot.name}</h2>
+                {spot.name_jp && (
+                  <p className="text-sm text-mid-gray mt-0.5">{spot.name_jp}</p>
+                )}
+              </div>
 
-          {spot.description && (
-            <p className="text-sm text-charcoal leading-relaxed">{spot.description}</p>
+              {spot.description && (
+                <p className="text-sm text-charcoal leading-relaxed">{spot.description}</p>
+              )}
+
+              {spot.tags && spot.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {spot.tags.map((tag) => (
+                    <span key={tag} className="text-xs bg-warm-gray text-mid-gray px-2 py-0.5 rounded-full">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-1 pb-4">
+                {spot.map_url && (
+                  <a
+                    href={spot.map_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-tokyo-red text-white font-bold rounded-2xl text-sm"
+                  >
+                    <MapPin size={15} />
+                    在地圖開啟
+                  </a>
+                )}
+                <button
+                  onClick={() => setEditMode(true)}
+                  className="px-4 py-3 rounded-2xl border border-soft-border text-mid-gray hover:text-charcoal hover:border-charcoal transition-colors"
+                >
+                  <Pencil size={15} />
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="px-4 py-3 rounded-2xl border border-soft-border text-mid-gray hover:text-tokyo-red hover:border-tokyo-red transition-colors"
+                >
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            </>
           )}
-
-          {spot.tags && spot.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {spot.tags.map((tag) => (
-                <span key={tag} className="text-xs bg-warm-gray text-mid-gray px-2 py-0.5 rounded-full">
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex gap-2 pt-1 pb-4">
-            {spot.map_url && (
-              <a
-                href={spot.map_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 flex items-center justify-center gap-2 py-3 bg-tokyo-red text-white font-bold rounded-2xl text-sm"
-              >
-                <MapPin size={15} />
-                在地圖開啟
-              </a>
-            )}
-            <button
-              onClick={handleDelete}
-              className="px-4 py-3 rounded-2xl border border-soft-border text-mid-gray hover:text-tokyo-red hover:border-tokyo-red transition-colors"
-            >
-              <Trash2 size={15} />
-            </button>
-          </div>
         </div>
       </div>
     </div>
@@ -249,6 +410,12 @@ export default function SpotsSection() {
     setForm(EMPTY_FORM)
     setShowForm(false)
     setSaving(false)
+  }
+
+  async function handleSave(id: string, updates: Partial<Omit<Spot, 'id' | 'created_at'>>) {
+    await updateSpot(id, updates)
+    setSpots((prev) => prev.map((s) => s.id === id ? { ...s, ...updates } : s))
+    setSelectedSpot((prev) => prev ? { ...prev, ...updates } : null)
   }
 
   async function handleDelete(id: string) {
@@ -382,6 +549,7 @@ export default function SpotsSection() {
           spot={selectedSpot}
           onClose={() => setSelectedSpot(null)}
           onDelete={handleDelete}
+          onSave={handleSave}
         />
       )}
 
