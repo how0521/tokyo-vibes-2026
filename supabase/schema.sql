@@ -73,6 +73,25 @@ INSERT INTO public.itinerary (day_num, time, title, map_url, notes, is_done) VAL
   (5, '15:00', '台場', 'https://www.google.com/maps/search/?api=1&query=Odaiba+Tokyo', 'teamLab / DiverCity Gundam', false),
   (5, '18:30', '台場 夕陽 & 晚餐', 'https://www.google.com/maps/search/?api=1&query=台場+夕陽', '彩虹橋夜景超美 🌇', false),
 
+  -- Day 1: 5/20 返回飯店
+  (1, '20:10', '返回飯店 🏨', 'https://www.google.com/maps/search/?api=1&query=Tosei+Hotel+Cocone+Ueno+Okachimachi', 'Tosei Hotel Cocone 上野御徒町', false),
+
+  -- Day 2: 5/21 飯店出發 / 返回
+  (2, '08:30', '從飯店出發 🏨', 'https://www.google.com/maps/search/?api=1&query=Tosei+Hotel+Cocone+Ueno+Okachimachi', 'Tosei Hotel Cocone 上野御徒町', false),
+  (2, '19:15', '返回飯店 🏨', 'https://www.google.com/maps/search/?api=1&query=Tosei+Hotel+Cocone+Ueno+Okachimachi', 'Tosei Hotel Cocone 上野御徒町', false),
+
+  -- Day 3: 5/22 飯店出發 / 返回（迪士尼日，早出晚歸）
+  (3, '06:30', '從飯店出發 🏨', 'https://www.google.com/maps/search/?api=1&query=Tosei+Hotel+Cocone+Ueno+Okachimachi', 'Tosei Hotel Cocone 上野御徒町', false),
+  (3, '23:10', '返回飯店 🏨', 'https://www.google.com/maps/search/?api=1&query=Tosei+Hotel+Cocone+Ueno+Okachimachi', 'Tosei Hotel Cocone 上野御徒町', false),
+
+  -- Day 4: 5/23 飯店出發 / 返回
+  (4, '09:00', '從飯店出發 🏨', 'https://www.google.com/maps/search/?api=1&query=Tosei+Hotel+Cocone+Ueno+Okachimachi', 'Tosei Hotel Cocone 上野御徒町', false),
+  (4, '20:35', '返回飯店 🏨', 'https://www.google.com/maps/search/?api=1&query=Tosei+Hotel+Cocone+Ueno+Okachimachi', 'Tosei Hotel Cocone 上野御徒町', false),
+
+  -- Day 5: 5/24 飯店出發 / 返回
+  (5, '09:30', '從飯店出發 🏨', 'https://www.google.com/maps/search/?api=1&query=Tosei+Hotel+Cocone+Ueno+Okachimachi', 'Tosei Hotel Cocone 上野御徒町', false),
+  (5, '20:20', '返回飯店 🏨', 'https://www.google.com/maps/search/?api=1&query=Tosei+Hotel+Cocone+Ueno+Okachimachi', 'Tosei Hotel Cocone 上野御徒町', false),
+
   -- Day 6: 5/25 回程
   (6, '08:00', '飯店早餐 & 整理行李', NULL, '記得確認所有物品！', false),
   (6, '10:00', '飯店 Check-out', 'https://www.google.com/maps/search/?api=1&query=Tosei+Hotel+Cocone+Ueno+Okachimachi', '行李可寄放至下午', false),
