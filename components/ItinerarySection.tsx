@@ -132,7 +132,7 @@ export default function ItinerarySection() {
     const prev = idx > 0 ? dayItems[idx - 1] : null
 
     const newTime = formData.time || dayItems[idx].time
-    const newStay = parseInt(formData.stay_duration) || 60
+    const newStay = parseInt(formData.stay_duration) >= 0 ? parseInt(formData.stay_duration) : 60
 
     // 偵測與前一個景點是否重疊
     if (prev) {
@@ -173,8 +173,8 @@ export default function ItinerarySection() {
       title: formData.title.trim(),
       map_url: formData.map_url.trim() || null,
       notes: formData.notes.trim() || null,
-      stay_duration: parseInt(formData.stay_duration) || 60,
-      transit_duration: parseInt(formData.transit_duration) || 30,
+      stay_duration: parseInt(formData.stay_duration) >= 0 ? parseInt(formData.stay_duration) : 60,
+      transit_duration: parseInt(formData.transit_duration) >= 0 ? parseInt(formData.transit_duration) : 30,
       transit_mode: formData.transit_mode,
     }
 
@@ -216,8 +216,8 @@ export default function ItinerarySection() {
       title: formData.title.trim(),
       map_url: formData.map_url.trim() || null,
       notes: formData.notes.trim() || null,
-      stay_duration: parseInt(formData.stay_duration) || 60,
-      transit_duration: parseInt(formData.transit_duration) || 30,
+      stay_duration: parseInt(formData.stay_duration) >= 0 ? parseInt(formData.stay_duration) : 60,
+      transit_duration: parseInt(formData.transit_duration) >= 0 ? parseInt(formData.transit_duration) : 30,
       transit_mode: formData.transit_mode,
     }
     setItems((prev) =>
@@ -248,8 +248,8 @@ export default function ItinerarySection() {
       map_url: form.map_url.trim() || null,
       notes: form.notes.trim() || null,
       is_done: false,
-      stay_duration: parseInt(form.stay_duration) || 60,
-      transit_duration: parseInt(form.transit_duration) || 30,
+      stay_duration: parseInt(form.stay_duration) >= 0 ? parseInt(form.stay_duration) : 60,
+      transit_duration: parseInt(form.transit_duration) >= 0 ? parseInt(form.transit_duration) : 30,
       transit_mode: form.transit_mode,
     })
     setForm(EMPTY_FORM)
