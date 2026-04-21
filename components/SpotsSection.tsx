@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { MapPin, Plus, Trash2, Loader2, X, ExternalLink, Sparkles } from 'lucide-react'
 import { supabase, fetchSpots, addSpot, deleteSpot } from '@/lib/supabase'
 import type { Spot, SpotCategory } from '@/lib/types'
@@ -262,6 +262,53 @@ export default function SpotsSection() {
     setForm({ ...form, map_url: url })
   }
 
+  const nameInputRef = useRef<HTMLInputElement>(null)
+  const formRef = useRef(form)
+  useEffect(() => { formRef.current = form }, [form])
+
+  useEffect(() => {
+    if (!showForm) return
+    const input = nameInputRef.current
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const g = (window as any).google
+    if (!input || !g) return
+
+    const autocomplete = new g.maps.places.Autocomplete(input, {
+      fields: ['name', 'place_id', 'photos', 'editorial_summary', 'vicinity', 'types'],
+      componentRestrictions: { country: 'jp' },
+    })
+
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace()
+      if (!place.place_id) return
+
+      const types: string[] = place.types ?? []
+      const isRestaurant = types.some((t: string) =>
+        ['restaurant', 'food', 'bar', 'cafe', 'meal_takeaway', 'meal_delivery', 'bakery'].includes(t)
+      )
+
+      let imageUrl = ''
+      if (place.photos && place.photos.length > 0) {
+        imageUrl = place.photos[0].getUrl({ maxWidth: 800 })
+      }
+
+      const vicinity: string = place.vicinity ?? ''
+      const area = vicinity.split(',')[0].trim()
+
+      setForm({
+        ...formRef.current,
+        name: place.name ?? formRef.current.name,
+        category: isRestaurant ? 'restaurant' : 'spot',
+        area: area || formRef.current.area,
+        description: place.editorial_summary?.overview ?? formRef.current.description,
+        image_url: imageUrl || formRef.current.image_url,
+        map_url: `https://www.google.com/maps/place/?q=place_id:${place.place_id}`,
+      })
+    })
+
+    return () => g.maps.event.clearInstanceListeners(autocomplete)
+  }, [showForm])
+
   const existingAreas = Array.from(new Set(spots.map((s) => s.area)))
 
   return (
@@ -350,11 +397,13 @@ export default function SpotsSection() {
             </div>
             <form onSubmit={handleAdd} className="space-y-3">
               <input
+                ref={nameInputRef}
                 className={inputClass}
-                placeholder="名稱 *"
+                placeholder="名稱 *（輸入後選擇地點自動填入）"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 required
+                autoFocus
               />
               <input
                 className={inputClass}
